@@ -1,13 +1,16 @@
 import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
 import { extractRegisteredSourceIdentity, type IdentityObservation } from "./identity";
+import { discoverSnapshotUrls } from "../crawl/discovery";
 import {
   collectionEnabledSources,
   findSource,
 } from "../sources/registry";
 import {
   getLatestSourceSnapshot,
+  getLatestSourceSnapshotRecord,
   persistIdentityObservation,
   persistSourceSnapshot,
+  persistUrlDiscoveryObservation,
 } from "./postgres-store";
 
 const COLLECTION_COOLDOWN_MS = 30 * 60 * 1000;
@@ -113,11 +116,38 @@ export async function collectScheduledSources(
         source.slug,
       );
 
+      const snapshot =
+        result.snapshot ??
+        (await getLatestSourceSnapshotRecord(database, source.id));
+
+      let discoveredCount: number | null = null;
+      let crawlCandidateCount: number | null = null;
+      let discoveryInserted = false;
+
+      if (snapshot) {
+        const discovery = await discoverSnapshotUrls(
+          bucket,
+          source,
+          snapshot,
+        );
+
+        discoveryInserted = await persistUrlDiscoveryObservation(
+          database,
+          snapshot,
+          discovery,
+        );
+        discoveredCount = discovery.payload.discovered_count;
+        crawlCandidateCount = discovery.payload.crawl_candidate_count;
+      }
+
       console.log("scheduled_source_collection", {
         source: source.slug,
         status: result.status,
         latest_snapshot_id: result.latest_snapshot_id,
         claims_emitted: result.claims_emitted,
+        discovered_count: discoveredCount,
+        crawl_candidate_count: crawlCandidateCount,
+        discovery_inserted: discoveryInserted,
       });
     } catch (error) {
       console.error("scheduled_source_collection_failed", {
