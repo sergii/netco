@@ -1,4 +1,5 @@
 import { sourceRoute } from "./routes/sources";
+import { getDatabaseStatus } from "./db/status";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
@@ -93,7 +94,22 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/v1/evidence/status") {
-      return json(evidence, evidence.ready ? 200 : 503, headers);
+      const database = env.DATABASE
+        ? await getDatabaseStatus(env.DATABASE)
+        : {
+            reachable: false,
+            schema_ready: false,
+            required_tables: 0,
+            content_length_column: false,
+          };
+
+      const status = {
+        ...evidence,
+        ready: evidence.bindings.snapshots && database.schema_ready,
+        database,
+      };
+
+      return json(status, status.ready ? 200 : 503, headers);
     }
 
     if (request.method === "GET") {
