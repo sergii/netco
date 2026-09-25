@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/geo-point-observation.v1.schema.json",
+  "title": "Netco Geo Point Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "address_id",
+    "latitude",
+    "longitude",
+    "acquisition_method",
+    "granularity",
+    "precision_meters",
+    "source_reference",
+    "observed_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "geo-point-observation.v1"
+    },
+    "address_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "latitude": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "longitude": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "acquisition_method": {
+      "type": "string",
+      "enum": [
+        "official_dataset",
+        "open_dataset",
+        "approved_geocoder",
+        "operator_verified",
+        "imported"
+      ]
+    },
+    "granularity": {
+      "type": "string",
+      "enum": [
+        "address",
+        "building",
+        "parcel",
+        "centroid",
+        "unknown"
+      ]
+    },
+    "precision_meters": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "source_reference": {
+      "type": ["string", "null"]
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
