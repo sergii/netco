@@ -29,6 +29,7 @@ export async function fetchCrawlCandidates(
   database: Hyperdrive,
   source: SourceDefinition,
   discoveredFromSnapshotId: string,
+  discoveryObservationId: string,
   discovery: UrlDiscoveryObservation,
 ): Promise<CandidateFetchResult> {
   const candidates = discovery.payload.links
@@ -60,13 +61,27 @@ export async function fetchCrawlCandidates(
         url: link.url,
         sourceId: source.id,
         maxBytes: CANDIDATE_MAX_BYTES,
+        allowedHosts: source.crawl_hosts,
+        maxRedirects: 5,
       });
 
-      await persistSourceSnapshot(database, source, snapshot);
+      await persistSourceSnapshot(
+        database,
+        source,
+        snapshot,
+        {
+          capture_kind: "crawl_candidate",
+          parent_snapshot_id: discoveredFromSnapshotId,
+          discovery_observation_id: discoveryObservationId,
+          expected_classification: link.classification,
+          relevance_score: link.relevance_score,
+        },
+      );
 
       const observation = buildPagePurposeObservation(
         source,
         discoveredFromSnapshotId,
+        discoveryObservationId,
         link,
         snapshot,
       );

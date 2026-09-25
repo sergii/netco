@@ -39,6 +39,8 @@ export async function collectKnownSource(
   return captureHttpSnapshot(bucket, {
     url: source.canonical_url,
     sourceId: source.id,
+    allowedHosts: source.crawl_hosts,
+    maxRedirects: 5,
   });
 }
 
@@ -80,9 +82,16 @@ export async function collectAndPersistKnownSource(
   const snapshot = await captureHttpSnapshot(bucket, {
     url: source.canonical_url,
     sourceId: source.id,
+    allowedHosts: source.crawl_hosts,
+    maxRedirects: 5,
   });
 
-  await persistSourceSnapshot(database, source, snapshot);
+  await persistSourceSnapshot(
+    database,
+    source,
+    snapshot,
+    { capture_kind: "source_root" },
+  );
 
   const observation = await extractRegisteredSourceIdentity(
     bucket,
@@ -144,11 +153,13 @@ export async function collectScheduledSources(
           snapshot,
         );
 
-        discoveryInserted = await persistUrlDiscoveryObservation(
-          database,
-          snapshot,
-          discovery,
-        );
+        const discoveryPersistence =
+          await persistUrlDiscoveryObservation(
+            database,
+            snapshot,
+            discovery,
+          );
+        discoveryInserted = discoveryPersistence.inserted;
         discoveredCount = discovery.payload.discovered_count;
         crawlCandidateCount = discovery.payload.crawl_candidate_count;
 
@@ -158,6 +169,7 @@ export async function collectScheduledSources(
             database,
             source,
             snapshot.id,
+            discoveryPersistence.id,
             discovery,
           );
 

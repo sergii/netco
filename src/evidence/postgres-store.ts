@@ -88,10 +88,19 @@ export async function getLatestSourceSnapshot(
   });
 }
 
+export interface SnapshotPersistenceMetadata {
+  capture_kind?: "source_root" | "crawl_candidate";
+  parent_snapshot_id?: string;
+  discovery_observation_id?: string;
+  expected_classification?: string;
+  relevance_score?: number;
+}
+
 export async function persistSourceSnapshot(
   database: Hyperdrive,
   source: SourceDefinition,
   snapshot: SnapshotRecord,
+  metadata: SnapshotPersistenceMetadata = {},
 ): Promise<void> {
   if (!snapshot.source_id) {
     throw new Error("snapshot_source_id_required");
@@ -176,6 +185,7 @@ export async function persistSourceSnapshot(
           JSON.stringify({
             requested_url: snapshot.requested_url,
             schema_version: snapshot.schema_version,
+            ...metadata,
           }),
         ],
       );
@@ -551,11 +561,16 @@ export async function getLatestSourceSnapshotRecord(
   });
 }
 
+export interface PersistObservationResult {
+  id: string;
+  inserted: boolean;
+}
+
 export async function persistUrlDiscoveryObservation(
   database: Hyperdrive,
   snapshot: SnapshotRecord,
   observation: UrlDiscoveryObservation,
-): Promise<boolean> {
+): Promise<PersistObservationResult> {
   return withPostgresClient(database, async (client) => {
     const result = await client.query<{ id: string }>(
       `
@@ -610,7 +625,45 @@ export async function persistUrlDiscoveryObservation(
       ],
     );
 
-    return result.rowCount === 1;
+    const inserted = result.rows[0];
+
+    if (inserted) {
+      return {
+        id: inserted.id,
+        inserted: true,
+      };
+    }
+
+    const existing = await client.query<{ id: string }>(
+      `
+        SELECT id
+        FROM observations
+        WHERE source_snapshot_id = $1
+          AND schema_name = $2
+          AND schema_version = $3
+          AND extractor = $4
+          AND extractor_version = $5
+        ORDER BY extracted_at DESC
+        LIMIT 1
+      `,
+      [
+        snapshot.id,
+        observation.schema_name,
+        observation.schema_version,
+        observation.extractor,
+        observation.extractor_version,
+      ],
+    );
+
+    const row = existing.rows[0];
+    if (!row) {
+      throw new Error("discovery_observation_persistence_failed");
+    }
+
+    return {
+      id: row.id,
+      inserted: false,
+    };
   });
 }
 
