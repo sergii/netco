@@ -1,4 +1,5 @@
 import { getDatabaseStatus } from "../db/status";
+import { getAddressGeoPointProvenance } from "../geo/evidence";
 import { getGeoEnrichmentBacklog } from "../geo/enrichment-backlog";
 import {
   getCoveragePointFeatureCollection,
@@ -25,8 +26,11 @@ export async function geoRoute(
     url.pathname === "/api/v1/geo/coverage-points";
   const enrichmentBacklog =
     url.pathname === "/api/v1/geo/enrichment-backlog";
+  const provenanceMatch = url.pathname.match(
+    /^\/api\/v1\/geo\/addresses\/([0-9a-f-]+)\/provenance$/,
+  );
 
-  if (!coveragePoints && !enrichmentBacklog) {
+  if (!coveragePoints && !enrichmentBacklog && !provenanceMatch) {
     return null;
   }
 
@@ -52,6 +56,28 @@ export async function geoRoute(
     return {
       status: 200,
       body: await getGeoEnrichmentBacklog(env.DATABASE),
+    };
+  }
+
+  if (provenanceMatch) {
+    const provenance = await getAddressGeoPointProvenance(
+      env.DATABASE,
+      provenanceMatch[1],
+    );
+
+    if (!provenance) {
+      return {
+        status: 404,
+        body: {
+          error: "geo_point_provenance_not_found",
+          address_id: provenanceMatch[1],
+        },
+      };
+    }
+
+    return {
+      status: 200,
+      body: provenance,
     };
   }
 
