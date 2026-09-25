@@ -15,6 +15,7 @@ export interface PagePurposeObservation {
   payload: {
     source_slug: string;
     discovered_from_snapshot_id: string;
+    discovery_observation_id: string;
     url: string;
     classification: ClassifiedLink["classification"];
     relevance_score: number;
@@ -29,6 +30,7 @@ export interface PagePurposeObservation {
 export function buildPagePurposeObservation(
   source: SourceDefinition,
   discoveredFromSnapshotId: string,
+  discoveryObservationId: string,
   link: ClassifiedLink,
   snapshot: SnapshotRecord,
 ): PagePurposeObservation {
@@ -50,6 +52,7 @@ export function buildPagePurposeObservation(
     payload: {
       source_slug: source.slug,
       discovered_from_snapshot_id: discoveredFromSnapshotId,
+      discovery_observation_id: discoveryObservationId,
       url: link.url,
       classification: link.classification,
       relevance_score: link.relevance_score,
