@@ -1,0 +1,79 @@
+name: VS12 Production Proof
+
+on:
+  push:
+    branches:
+      - test/vs12-production-proof
+    paths:
+      - ".github/workflows/vs12-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify viewport-bounded geo reads
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base="https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points"
+
+          inside="$(curl -fsS --get             --data-urlencode "geometry=present"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base")"
+
+          outside="$(curl -fsS --get             --data-urlencode "geometry=present"             --data-urlencode "west=31"             --data-urlencode "south=51"             --data-urlencode "east=32"             --data-urlencode "north=52"             "$base")"
+
+          incomplete_status="$(curl -sS -o /tmp/incomplete.json -w '%{http_code}' --get             --data-urlencode "geometry=present"             --data-urlencode "west=30"             "$base")"
+
+          invalid_status="$(curl -sS -o /tmp/invalid.json -w '%{http_code}' --get             --data-urlencode "geometry=present"             --data-urlencode "west=31"             --data-urlencode "south=50"             --data-urlencode "east=30"             --data-urlencode "north=51"             "$base")"
+
+          missing_status="$(curl -sS -o /tmp/missing.json -w '%{http_code}' --get             --data-urlencode "geometry=missing"             --data-urlencode "west=30"             --data-urlencode "south=50"             --data-urlencode "east=31"             --data-urlencode "north=51"             "$base")"
+
+          removed_ingest_status="$(curl -sS -o /tmp/removed-ingest.json -w '%{http_code}' -X POST             "https://netco.sergii-ponomarov.workers.dev/__internal/vs11/4c0de5da-9c91-4a30-93b8-04a893f7713f")"
+
+          INSIDE="$inside" OUTSIDE="$outside"           INCOMPLETE_STATUS="$incomplete_status"           INVALID_STATUS="$invalid_status"           MISSING_STATUS="$missing_status"           REMOVED_INGEST_STATUS="$removed_ingest_status"           node --input-type=module <<'NODE'
+          const inside = JSON.parse(process.env.INSIDE);
+          const outside = JSON.parse(process.env.OUTSIDE);
+
+          if (inside.count !== 1) throw new Error("inside viewport must contain exactly one point");
+          if (outside.count !== 0) throw new Error("outside viewport must contain zero points");
+
+          const feature = inside.features?.[0];
+          if (feature?.id !== "d1cdbb61-98c7-4045-b70a-21ed4b4e6dca") {
+            throw new Error("unexpected feature id");
+          }
+          if (feature.geometry?.type !== "Point") throw new Error("Point missing");
+          if (feature.properties?.provider_count !== 1) throw new Error("provider count changed");
+          if (feature.properties?.availability_count !== 2) throw new Error("availability count changed");
+          if (JSON.stringify(feature.properties?.technologies) !== JSON.stringify(["gig","xgpon"])) {
+            throw new Error("technologies changed");
+          }
+
+          for (const [name, status] of Object.entries({
+            incomplete: process.env.INCOMPLETE_STATUS,
+            invalid: process.env.INVALID_STATUS,
+            missingWithViewport: process.env.MISSING_STATUS,
+          })) {
+            if (status !== "400") throw new Error(name + " expected 400, got " + status);
+          }
+
+          if (process.env.REMOVED_INGEST_STATUS !== "404") {
+            throw new Error("VS11 one-time ingest endpoint still exists");
+          }
+
+          console.log(JSON.stringify({
+            inside_count: inside.count,
+            outside_count: outside.count,
+            feature,
+            viewport: inside.viewport,
+            invalid_statuses: {
+              incomplete: process.env.INCOMPLETE_STATUS,
+              invalid: process.env.INVALID_STATUS,
+              missing_with_viewport: process.env.MISSING_STATUS,
+            },
+            removed_vs11_ingest_status: process.env.REMOVED_INGEST_STATUS,
+          }, null, 2));
+          NODE
