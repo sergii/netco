@@ -32,31 +32,31 @@ jobs:
                 const rows = body.extractions;
                 if (!Array.isArray(rows)) process.exit(1);
 
-                const v2 = rows.filter(row =>
+                const v3 = rows.filter(row =>
                   row.extractor === "deterministic-domain-html" &&
-                  row.extractor_version === "2"
+                  row.extractor_version === "3"
                 );
 
-                const plan = v2.find(row =>
+                const plan = v3.find(row =>
                   row.schema_name === "plan-observation" &&
                   row.validation_status === "valid"
                 );
-                const technology = v2.find(row =>
+                const technology = v3.find(row =>
                   row.schema_name === "technology-observation" &&
                   row.validation_status === "valid"
                 );
-                const coverage = v2.find(row =>
+                const coverage = v3.find(row =>
                   row.schema_name === "coverage-entrypoint-observation" &&
                   row.validation_status === "valid"
                 );
 
-                const predicates = v2.flatMap(row =>
+                const predicates = v3.flatMap(row =>
                   Array.isArray(row.claims)
                     ? row.claims.map(claim => claim.predicate)
                     : []
                 );
 
-                const v2TechnologyLabels = v2
+                const v3TechnologyLabels = v2
                   .filter(row => row.schema_name === "technology-observation")
                   .flatMap(row =>
                     Array.isArray(row?.payload?.technologies)
@@ -73,7 +73,7 @@ jobs:
                   technology.payload.technologies.length > 0 &&
                   coverage?.validation_status === "valid" &&
                   coverage?.payload?.geographic_hint === "Київ" &&
-                  !v2TechnologyLabels.includes("XGPON") &&
+                  !v3TechnologyLabels.includes("XGPON") &&
                   predicates.includes("plan.catalog_entry") &&
                   predicates.includes("service.technology") &&
                   predicates.includes("coverage.checker_entrypoint");
