@@ -30,6 +30,7 @@ export async function getCoveragePointFeatureCollection(
       latitude: string | number | null;
       longitude: string | number | null;
       provider_count: string | number;
+      provider_ids: string[];
       availability_count: string | number;
       technologies: string[];
       latest_observed_at: Date | string;
@@ -51,6 +52,10 @@ export async function getCoveragePointFeatureCollection(
           a.latitude,
           a.longitude,
           count(DISTINCT paa.provider_id) AS provider_count,
+          array_agg(
+            DISTINCT paa.provider_id::text
+            ORDER BY paa.provider_id::text
+          ) AS provider_ids,
           count(*) AS availability_count,
           array_agg(DISTINCT paa.technology ORDER BY paa.technology)
             AS technologies,
@@ -139,6 +144,7 @@ export async function getCoveragePointFeatureCollection(
             geometry_state: hasGeometry ? "present" : "missing",
             freshness_state: row.has_fresh ? "fresh" : "stale",
             provider_count: Number(row.provider_count),
+            provider_ids: row.provider_ids,
             availability_count: Number(row.availability_count),
             technologies: row.technologies,
             latest_observed_at: new Date(
