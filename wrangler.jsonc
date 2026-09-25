@@ -33,5 +33,10 @@
       "binding": "DATABASE",
       "id": "a8f6ce20ac9f4541bf8758cf10eb7948"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": [
+      "17 3 * * *"
+    ]
+  }
 }

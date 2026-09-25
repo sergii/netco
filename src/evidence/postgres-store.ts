@@ -339,7 +339,7 @@ export async function getSourceProvenance(
       http_status: number;
       content_hash: string;
       content_type: string | null;
-      content_length: number | null;
+      content_length: string | number | null;
       body_ref: string;
     }>(
       `
@@ -447,6 +447,10 @@ export async function getSourceProvenance(
       snapshot: {
         ...snapshotRow,
         fetched_at: iso(snapshotRow.fetched_at),
+        content_length:
+          snapshotRow.content_length === null
+            ? null
+            : Number(snapshotRow.content_length),
       },
       observation: observationRow
         ? {

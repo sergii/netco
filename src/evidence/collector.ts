@@ -1,6 +1,9 @@
 import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
 import { extractRegisteredSourceIdentity, type IdentityObservation } from "./identity";
-import { findSource } from "../sources/registry";
+import {
+  collectionEnabledSources,
+  findSource,
+} from "../sources/registry";
 import {
   getLatestSourceSnapshot,
   persistIdentityObservation,
@@ -95,4 +98,32 @@ export async function collectAndPersistKnownSource(
     latest_fetched_at: snapshot.fetched_at,
     retry_after_seconds: Math.ceil(COLLECTION_COOLDOWN_MS / 1000),
   };
+}
+
+
+export async function collectScheduledSources(
+  bucket: R2Bucket,
+  database: Hyperdrive,
+): Promise<void> {
+  for (const source of collectionEnabledSources()) {
+    try {
+      const result = await collectAndPersistKnownSource(
+        bucket,
+        database,
+        source.slug,
+      );
+
+      console.log("scheduled_source_collection", {
+        source: source.slug,
+        status: result.status,
+        latest_snapshot_id: result.latest_snapshot_id,
+        claims_emitted: result.claims_emitted,
+      });
+    } catch (error) {
+      console.error("scheduled_source_collection_failed", {
+        source: source.slug,
+        error: error instanceof Error ? error.message : "unknown_error",
+      });
+    }
+  }
 }
