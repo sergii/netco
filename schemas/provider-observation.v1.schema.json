@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/provider-observation.v1.schema.json",
+  "title": "Netco Provider Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source",
+    "provider"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "provider-observation.v1"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "kind", "fetched_at"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "official_registry",
+            "official_website",
+            "address_checker",
+            "official_api",
+            "partner_feed",
+            "aggregator",
+            "user_report",
+            "forum",
+            "social",
+            "manual"
+          ]
+        },
+        "fetched_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["names", "technologies", "plans", "coverage", "field_states"],
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/name"
+          }
+        },
+        "legal_name": {
+          "type": ["string", "null"]
+        },
+        "edrpou": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9]{8,10}$"
+        },
+        "website": {
+          "type": ["string", "null"],
+          "format": "uri"
+        },
+        "phones": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "technologies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ethernet",
+              "fttb",
+              "ftth",
+              "gpon",
+              "epon",
+              "xpon",
+              "docsis",
+              "dsl",
+              "fixed_wireless",
+              "other",
+              "unknown"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "plans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/plan"
+          }
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/coverage"
+          }
+        },
+        "field_states": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "known",
+              "not_collected",
+              "not_found",
+              "not_disclosed",
+              "unknown",
+              "unverified",
+              "not_applicable",
+              "conflicting",
+              "stale"
+            ]
+          }
+        }
+      }
+    },
+    "extraction_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "type"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "official",
+            "legal",
+            "localized",
+            "transliterated",
+            "legacy",
+            "former_brand",
+            "colloquial",
+            "domain",
+            "abbreviation",
+            "misspelling"
+          ]
+        },
+        "language": {
+          "type": ["string", "null"]
+        },
+        "script": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]{1,2})?$"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "download_mbps": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "upload_mbps": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "technology": {
+          "type": ["string", "null"]
+        },
+        "monthly_price": {
+          "oneOf": [
+            {"$ref": "#/$defs/money"},
+            {"type": "null"}
+          ]
+        },
+        "promo_price": {
+          "oneOf": [
+            {"$ref": "#/$defs/money"},
+            {"type": "null"}
+          ]
+        },
+        "promo_duration_months": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "price_after_promo": {
+          "oneOf": [
+            {"$ref": "#/$defs/money"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "network_present",
+            "service_available",
+            "orderable",
+            "installation_required",
+            "installation_confirmed",
+            "active_subscriber_observed"
+          ]
+        },
+        "value": {
+          "type": ["boolean", "null"]
+        },
+        "address_text": {
+          "type": ["string", "null"]
+        },
+        "technology": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}
