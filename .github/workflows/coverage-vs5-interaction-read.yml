@@ -56,3 +56,5 @@ jobs:
           echo "Coverage VS5 interaction evidence did not become valid in time." >&2
           echo "$body" >&2
           exit 1
+
+# acceptance rerun: 2026-09-25T15:46Z
