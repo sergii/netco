@@ -92,7 +92,10 @@ async function optionSnapshots(locator: Locator): Promise<OptionSnapshot[]> {
   try {
     return await locator.locator("option").evaluateAll((options) =>
       options.slice(0, 300).map((option) => {
-        const element = option as HTMLOptionElement;
+        const element = option as unknown as {
+          textContent: string | null;
+          value: string;
+        };
         return {
           label: (element.textContent ?? "").replace(/\s+/g, " ").trim(),
           value: element.value,
