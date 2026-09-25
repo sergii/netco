@@ -473,3 +473,135 @@ export async function getAddressAvailability(
     };
   });
 }
+
+
+export async function getAllAddressAvailability(
+  database: Hyperdrive,
+  normalizedKey: string,
+): Promise<Record<string, unknown>> {
+  return withPostgresClient(database, async (client) => {
+    const address = await client.query<{
+      id: string;
+      country_code: string;
+      region: string | null;
+      city: string;
+      district: string | null;
+      street: string;
+      house_number: string;
+      corpus: string | null;
+      building_letter: string | null;
+      postal_code: string | null;
+      normalized_key: string;
+    }>(
+      `
+        SELECT
+          a.id,
+          a.country_code,
+          a.region,
+          a.city,
+          a.district,
+          a.street,
+          a.house_number,
+          a.corpus,
+          a.building_letter,
+          a.postal_code,
+          a.normalized_key
+        FROM addresses a
+        WHERE a.normalized_key = $1
+        LIMIT 1
+      `,
+      [normalizedKey],
+    );
+
+    const addressRow = address.rows[0];
+
+    if (!addressRow) {
+      return {
+        address: null,
+        normalized_key: normalizedKey,
+        providers: [],
+      };
+    }
+
+    const availability = await client.query<{
+      provider_id: string;
+      provider_slug: string | null;
+      provider_display_name: string | null;
+      service_kind: string;
+      technology: string;
+      availability_state: string;
+      observed_at: Date | string;
+      fresh_until: Date | string | null;
+      supporting_claim_id: string;
+      projection_version: string;
+      rebuilt_at: Date | string;
+    }>(
+      `
+        SELECT
+          paa.provider_id,
+          pp.slug AS provider_slug,
+          pp.display_name AS provider_display_name,
+          paa.service_kind,
+          paa.technology,
+          paa.availability_state,
+          paa.observed_at,
+          paa.fresh_until,
+          paa.supporting_claim_id,
+          paa.projection_version,
+          paa.rebuilt_at
+        FROM provider_address_availability paa
+        LEFT JOIN provider_profiles pp
+          ON pp.provider_id = paa.provider_id
+        WHERE paa.address_id = $1
+        ORDER BY
+          pp.display_name NULLS LAST,
+          pp.slug NULLS LAST,
+          paa.provider_id,
+          paa.service_kind,
+          paa.technology
+      `,
+      [addressRow.id],
+    );
+
+    const providers = new Map<
+      string,
+      {
+        provider_id: string;
+        slug: string | null;
+        display_name: string | null;
+        availability: Array<Record<string, unknown>>;
+      }
+    >();
+
+    for (const row of availability.rows) {
+      const current = providers.get(row.provider_id) ?? {
+        provider_id: row.provider_id,
+        slug: row.provider_slug,
+        display_name: row.provider_display_name,
+        availability: [],
+      };
+
+      current.availability.push({
+        service_kind: row.service_kind,
+        technology: row.technology,
+        availability_state: row.availability_state,
+        observed_at: new Date(row.observed_at).toISOString(),
+        fresh_until:
+          row.fresh_until === null
+            ? null
+            : new Date(row.fresh_until).toISOString(),
+        supporting_claim_id: row.supporting_claim_id,
+        projection_version: row.projection_version,
+        rebuilt_at: new Date(row.rebuilt_at).toISOString(),
+      });
+
+      providers.set(row.provider_id, current);
+    }
+
+    return {
+      address: addressRow,
+      normalized_key: normalizedKey,
+      providers: [...providers.values()],
+    };
+  });
+}
