@@ -920,7 +920,7 @@ export async function getPendingDomainExtractionPages(
             WHERE domain_observation.source_snapshot_id = s.id
               AND domain_observation.schema_name = ANY($2::text[])
               AND domain_observation.extractor = 'deterministic-domain-html'
-              AND domain_observation.extractor_version = '1'
+              AND domain_observation.extractor_version = '2'
           )
         ORDER BY s.fetched_at DESC
         LIMIT $3
@@ -1154,6 +1154,8 @@ export async function getRecentDomainExtractions(
       id: string;
       source_snapshot_id: string;
       schema_name: string;
+      extractor: string;
+      extractor_version: string;
       extracted_at: Date | string;
       validation_status: string;
       validation_errors: unknown;
@@ -1164,6 +1166,8 @@ export async function getRecentDomainExtractions(
           o.id,
           o.source_snapshot_id,
           o.schema_name,
+          o.extractor,
+          o.extractor_version,
           o.extracted_at,
           o.validation_status,
           o.validation_errors,
@@ -1234,6 +1238,8 @@ export async function getRecentDomainExtractions(
       id: row.id,
       source_snapshot_id: row.source_snapshot_id,
       schema_name: row.schema_name,
+      extractor: row.extractor,
+      extractor_version: row.extractor_version,
       extracted_at: iso(row.extracted_at),
       validation_status: row.validation_status,
       validation_errors: row.validation_errors,
