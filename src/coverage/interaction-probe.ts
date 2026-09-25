@@ -231,6 +231,36 @@ async function chooseStreet(page: Page): Promise<ControlSnapshot> {
   };
 }
 
+async function continueStreetStep(page: Page): Promise<void> {
+  const button = page
+    .getByRole("button", { name: /продовжити/i })
+    .first();
+
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    if (await button.count()) {
+      if (await enabled(button)) {
+        await button.click();
+        await page.waitForTimeout(500);
+        return;
+      }
+    }
+
+    await page.waitForTimeout(200);
+  }
+
+  const text = page
+    .getByText("Продовжити", { exact: false })
+    .first();
+
+  if (await text.count()) {
+    await text.click();
+    await page.waitForTimeout(500);
+    return;
+  }
+
+  throw new Error("coverage_street_continue_not_found");
+}
+
 async function enabled(locator: Locator): Promise<boolean> {
   try {
     return await locator.isEnabled();
@@ -438,6 +468,7 @@ export async function probeLanetCoverageInteraction(
 
     if (streetControl) {
       try {
+        await continueStreetStep(page);
         houseControl = await chooseHouse(page);
       } catch (error) {
         validationErrors.push({
