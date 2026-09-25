@@ -1,6 +1,7 @@
 import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
 import { extractRegisteredSourceIdentity, type IdentityObservation } from "./identity";
 import { discoverSnapshotUrls } from "../crawl/discovery";
+import { fetchCrawlCandidates } from "../crawl/candidate-fetch";
 import {
   collectionEnabledSources,
   findSource,
@@ -38,6 +39,8 @@ export async function collectKnownSource(
   return captureHttpSnapshot(bucket, {
     url: source.canonical_url,
     sourceId: source.id,
+    allowedHosts: source.crawl_hosts,
+    maxRedirects: 5,
   });
 }
 
@@ -75,6 +78,8 @@ export async function collectAndPersistKnownSource(
   const snapshot = await captureHttpSnapshot(bucket, {
     url: source.canonical_url,
     sourceId: source.id,
+    allowedHosts: source.crawl_hosts,
+    maxRedirects: 5,
   });
 
   await persistSourceSnapshot(database, source, snapshot);
@@ -138,6 +143,20 @@ export async function collectScheduledSources(
         );
         discoveredCount = discovery.payload.discovered_count;
         crawlCandidateCount = discovery.payload.crawl_candidate_count;
+
+        const candidateResults = await fetchCrawlCandidates(
+          bucket,
+          database,
+          source,
+          snapshot,
+          discovery,
+        );
+
+        console.log("scheduled_crawl_candidates", {
+          source: source.slug,
+          page_budget: source.crawl_page_budget,
+          results: candidateResults,
+        });
       }
 
       console.log("scheduled_source_collection", {
