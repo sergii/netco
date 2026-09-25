@@ -8,6 +8,8 @@ import { geoRoute } from "./routes/geo";
 import { materializePendingAddressGeoPoints } from "./geo/evidence";
 import type { BrowserWorker } from "@cloudflare/playwright";
 import { explorerPage } from "./ui/explorer";
+import { apiDocsPage } from "./ui/api-docs";
+import OPENAPI_DOCUMENT from "../openapi/openapi.json";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
@@ -72,6 +74,17 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return explorerPage();
+    }
+
+    if (
+      request.method === "GET" &&
+      (url.pathname === "/docs" || url.pathname === "/docs/")
+    ) {
+      return apiDocsPage();
+    }
+
+    if (request.method === "GET" && url.pathname === "/openapi.json") {
+      return json(OPENAPI_DOCUMENT as JsonValue, 200, headers);
     }
 
     if (request.method === "GET" && url.pathname === "/healthz") {
@@ -191,6 +204,10 @@ export default {
           name: "Netco API",
           description:
             "Evidence-backed internet provider and geospatial intelligence API",
+          documentation: {
+            openapi: "/openapi.json",
+            reference: "/docs",
+          },
           endpoints: [
             "/healthz",
             "/api/v1/meta",
