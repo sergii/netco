@@ -1,3 +1,5 @@
+import { sourceRoute } from "./routes/sources";
+
 export interface Env {
   SNAPSHOTS?: R2Bucket;
   DATABASE?: Hyperdrive;
@@ -79,6 +81,7 @@ export default {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
             database: evidence.bindings.database,
+            sources: true,
             providers: false,
             geo: false,
             mcp: false,
@@ -93,6 +96,13 @@ export default {
       return json(evidence, evidence.ready ? 200 : 503, headers);
     }
 
+    if (request.method === "GET") {
+      const result = sourceRoute(url.pathname);
+      if (result) {
+        return json(result.body as JsonValue, result.status, headers);
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/") {
       return json(
         {
@@ -103,6 +113,8 @@ export default {
             "/healthz",
             "/api/v1/meta",
             "/api/v1/evidence/status",
+            "/api/v1/sources",
+            "/api/v1/sources/teremki",
           ],
         },
         200,
