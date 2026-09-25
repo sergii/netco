@@ -1,0 +1,63 @@
+name: Crawler VS2 Read Acceptance
+
+on:
+  push:
+    branches:
+      - test/crawler-vs2-read
+    paths:
+      - ".github/workflows/crawler-vs2-read.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      BASE_URL: https://netco.sergii-ponomarov.workers.dev
+
+    steps:
+      - name: Wait for Lanet discovery and crawled pages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 72); do
+            discovery="$(curl -fsS "$BASE_URL/api/v1/sources/lanet/discovery" 2>/dev/null || true)"
+            crawl="$(curl -fsS "$BASE_URL/api/v1/sources/lanet/crawl" 2>/dev/null || true)"
+
+            if DISCOVERY_BODY="$discovery" CRAWL_BODY="$crawl" node -e '
+              try {
+                const discovery = JSON.parse(process.env.DISCOVERY_BODY || "{}");
+                const crawl = JSON.parse(process.env.CRAWL_BODY || "{}");
+                const d = discovery.discovery;
+                const pages = crawl.pages;
+
+                if (
+                  d?.validation_status === "valid" &&
+                  Number(d?.payload?.crawl_candidate_count || 0) > 0 &&
+                  Array.isArray(pages) &&
+                  pages.length > 0 &&
+                  pages.some(p => p.validation_status === "valid")
+                ) {
+                  console.log(JSON.stringify({
+                    discovery,
+                    crawl
+                  }));
+                  process.exit(0);
+                }
+              } catch {}
+              process.exit(1);
+            '; then
+              exit 0
+            fi
+
+            echo "Waiting for Crawler VS2 production evidence (attempt $attempt/72)..."
+            sleep 5
+          done
+
+          echo "Crawler VS2 evidence did not become ready in time." >&2
+          echo "Discovery: $discovery" >&2
+          echo "Crawl: $crawl" >&2
+          exit 1
