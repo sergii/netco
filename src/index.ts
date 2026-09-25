@@ -84,7 +84,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/openapi.json") {
-      return json(OPENAPI_DOCUMENT as JsonValue, 200, headers);
+      return json(OPENAPI_DOCUMENT as unknown as JsonValue, 200, headers);
     }
 
     if (request.method === "GET" && url.pathname === "/healthz") {
