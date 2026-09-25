@@ -3,7 +3,9 @@
   "name": "netco",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-25",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
   "preview_urls": false,
   "observability": {
@@ -20,5 +22,10 @@
       "persist": true,
       "head_sampling_rate": 1
     }
-  }
+  },
+  "r2_buckets": [
+    {
+      "binding": "SNAPSHOTS"
+    }
+  ]
 }
