@@ -3,10 +3,16 @@ import { evidenceRoute } from "./routes/evidence";
 import { getDatabaseStatus } from "./db/status";
 import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
+import { coverageRoute } from "./routes/coverage";
+import {
+  probeLanetCoverageChecker,
+  type BrowserRunBinding,
+} from "./coverage/probe";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
   DATABASE?: Hyperdrive;
+  BROWSER?: BrowserRunBinding;
 }
 
 type JsonValue =
@@ -52,6 +58,7 @@ function evidenceStatus(env: Env) {
       observations: database,
       claims: database,
       provenance: snapshots && database,
+      coverage_browser: Boolean(env.BROWSER),
     },
   };
 }
@@ -80,7 +87,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "projection-resolution-vs4",
+          stage: "coverage-orderability-vs5",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -93,6 +100,7 @@ export default {
             provider_resolution: true,
             provider_projections: true,
             providers: true,
+            coverage_checker_probe: Boolean(env.BROWSER),
             geo: false,
             mcp: false,
           },
@@ -121,6 +129,15 @@ export default {
       };
 
       return json(status, status.ready ? 200 : 503, headers);
+    }
+
+    const coverageResult = await coverageRoute(request, env);
+    if (coverageResult) {
+      return json(
+        coverageResult.body as JsonValue,
+        coverageResult.status,
+        headers,
+      );
     }
 
     const providerResult = await providerRoute(request, env);
@@ -167,6 +184,7 @@ export default {
             "/api/v1/sources/lanet/extractions",
             "/api/v1/providers",
             "/api/v1/providers/lanet",
+            "/api/v1/coverage/lanet/checker-interface",
           ],
         },
         200,
@@ -197,5 +215,23 @@ export default {
     }
 
     ctx.waitUntil(collectScheduledSources(env.SNAPSHOTS, env.DATABASE));
+
+    if (env.BROWSER) {
+      ctx.waitUntil(
+        probeLanetCoverageChecker(
+          env.BROWSER,
+          env.SNAPSHOTS,
+          env.DATABASE,
+        ).catch((error) => {
+          console.error("coverage_checker_probe_failed", {
+            source: "lanet-coverage",
+            error:
+              error instanceof Error
+                ? error.message
+                : "unknown_error",
+          });
+        }),
+      );
+    }
   },
 } satisfies ExportedHandler<Env>;
