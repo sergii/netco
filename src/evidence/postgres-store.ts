@@ -93,7 +93,11 @@ export async function getLatestSourceSnapshot(
 }
 
 export interface SnapshotPersistenceMetadata {
-  capture_kind?: "source_root" | "crawl_candidate";
+  capture_kind?:
+    | "source_root"
+    | "crawl_candidate"
+    | "coverage_checker_probe"
+    | "coverage_checker_result";
   parent_snapshot_id?: string;
   discovery_observation_id?: string;
   expected_classification?: string;
