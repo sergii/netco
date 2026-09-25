@@ -7,6 +7,7 @@ export interface SourceDefinition {
   canonical_url: string;
   provider_candidate_name: string | null;
   identity_markers: readonly string[];
+  collection_enabled: boolean;
 }
 
 export const SOURCES: readonly SourceDefinition[] = [
@@ -19,6 +20,7 @@ export const SOURCES: readonly SourceDefinition[] = [
     canonical_url: "https://www.teremki.net.ua/",
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
+    collection_enabled: false,
   },
   {
     id: "eebfc808-4e2d-4bc8-af56-676b413a53ab",
@@ -29,8 +31,13 @@ export const SOURCES: readonly SourceDefinition[] = [
     canonical_url: "https://stat.teremki.net.ua/login.php",
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
+    collection_enabled: true,
   },
 ];
+
+export function collectionEnabledSources(): readonly SourceDefinition[] {
+  return SOURCES.filter((source) => source.collection_enabled);
+}
 
 export function findSource(slug: string): SourceDefinition | undefined {
   return SOURCES.find((source) => source.slug === slug);
