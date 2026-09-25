@@ -1,6 +1,10 @@
 import { sourceRoute } from "./routes/sources";
 import { evidenceRoute } from "./routes/evidence";
-import { getDatabaseStatus } from "./db/status";
+import {
+  getEvidenceStatus,
+  getServiceMeta,
+  type RuntimeBindingState,
+} from "./application/service-status";
 import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
 import { coverageRoute } from "./routes/coverage";
@@ -44,24 +48,11 @@ function requestId(request: Request): string {
   return request.headers.get("cf-ray") ?? crypto.randomUUID();
 }
 
-function evidenceStatus(env: Env) {
-  const snapshots = Boolean(env.SNAPSHOTS);
-  const database = Boolean(env.DATABASE);
-
+function runtimeBindingState(env: Env): RuntimeBindingState {
   return {
-    ready: snapshots && database,
-    bindings: {
-      snapshots,
-      database,
-    },
-    pipeline: {
-      snapshot_capture: snapshots,
-      relational_index: database,
-      observations: database,
-      claims: database,
-      provenance: snapshots && database,
-      coverage_browser: Boolean(env.BROWSER),
-    },
+    snapshots: Boolean(env.SNAPSHOTS),
+    database: Boolean(env.DATABASE),
+    browser: Boolean(env.BROWSER),
   };
 }
 
@@ -70,7 +61,7 @@ export default {
     const url = new URL(request.url);
     const id = requestId(request);
     const headers = { "x-request-id": id };
-    const evidence = evidenceStatus(env);
+    const bindings = runtimeBindingState(env);
 
     if (request.method === "GET" && url.pathname === "/") {
       return explorerPage();
@@ -101,59 +92,23 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/v1/meta") {
       return json(
-        {
-          service: "netco",
-          version: "0.1.0",
-          stage: "viewport-geo-query-vs12",
-          capabilities: {
-            evidence: evidence.ready,
-            snapshots: evidence.bindings.snapshots,
-            database: evidence.bindings.database,
-            sources: true,
-            url_discovery: true,
-            bounded_crawl: true,
-            domain_extraction: true,
-            source_backed_claims: true,
-            provider_resolution: true,
-            provider_projections: true,
-            providers: true,
-            coverage_checker_probe: false,
-            coverage_checker_interaction: false,
-            provider_collection_enabled: false,
-            address_coverage: true,
-            geo: true,
-            geo_evidence_materialization: true,
-            trusted_geo_source: "openstreetmap-nominatim-bounded-fixture",
-            geo_viewport_query: true,
-            mcp: false,
-          },
-        },
+        getServiceMeta(bindings) as unknown as JsonValue,
         200,
         headers,
       );
     }
 
     if (request.method === "GET" && url.pathname === "/api/v1/evidence/status") {
-      const database = env.DATABASE
-        ? await getDatabaseStatus(env.DATABASE)
-        : {
-            reachable: false,
-            schema_ready: false,
-            required_tables: 0,
-            content_length_column: false,
-            projection_schema_ready: false,
-            projection_tables: 0,
-            coverage_schema_ready: false,
-            coverage_tables: 0,
-          };
+      const status = await getEvidenceStatus(
+        bindings,
+        env.DATABASE,
+      );
 
-      const status = {
-        ...evidence,
-        ready: evidence.bindings.snapshots && database.schema_ready,
-        database: { ...database },
-      };
-
-      return json(status, status.ready ? 200 : 503, headers);
+      return json(
+        status as unknown as JsonValue,
+        status.ready ? 200 : 503,
+        headers,
+      );
     }
 
     const coverageResult = await coverageRoute(request, env);
