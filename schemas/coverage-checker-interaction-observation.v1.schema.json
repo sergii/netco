@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/coverage-checker-interaction-observation.v1.schema.json",
+  "title": "Netco Coverage Checker Interaction Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_slug",
+    "provider_slug",
+    "checker_url",
+    "fixture",
+    "page_url",
+    "page_title",
+    "street_control",
+    "house_control",
+    "evidence_markers",
+    "evidence_excerpt",
+    "body_text_length"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "coverage-checker-interaction-observation.v1"
+    },
+    "source_slug": { "type": "string", "minLength": 1 },
+    "provider_slug": { "type": "string", "minLength": 1 },
+    "checker_url": { "type": "string", "format": "uri" },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "country_code",
+        "city",
+        "street",
+        "house_number"
+      ],
+      "properties": {
+        "country_code": { "const": "UA" },
+        "city": { "const": "Київ" },
+        "street": { "const": "Клавдіївська" },
+        "house_number": { "const": "40А" }
+      }
+    },
+    "page_url": { "type": "string", "format": "uri" },
+    "page_title": { "type": "string" },
+    "street_control": {
+      "oneOf": [
+        { "$ref": "#/$defs/control" },
+        { "type": "null" }
+      ]
+    },
+    "house_control": {
+      "oneOf": [
+        { "$ref": "#/$defs/control" },
+        { "type": "null" }
+      ]
+    },
+    "evidence_markers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "evidence_excerpt": { "type": ["string", "null"] },
+    "body_text_length": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "role",
+        "accessible_name",
+        "tag_name",
+        "selected_label",
+        "selected_value",
+        "options_sample"
+      ],
+      "properties": {
+        "kind": { "type": "string", "enum": ["street", "house"] },
+        "role": { "type": "string", "minLength": 1 },
+        "accessible_name": { "type": ["string", "null"] },
+        "tag_name": { "type": ["string", "null"] },
+        "selected_label": { "type": ["string", "null"] },
+        "selected_value": { "type": ["string", "null"] },
+        "options_sample": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "value"],
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

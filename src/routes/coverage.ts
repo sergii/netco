@@ -1,5 +1,8 @@
 import { findSource } from "../sources/registry";
-import { getCoverageCheckerInterface } from "../coverage/store";
+import {
+  getCoverageCheckerInterface,
+  getCoverageCheckerInteraction,
+} from "../coverage/store";
 import { normalizeAddress } from "../coverage/address";
 import { getAddressAvailability } from "../coverage/orderability";
 import { getDatabaseStatus } from "../db/status";
@@ -23,11 +26,14 @@ export async function coverageRoute(
   const checkerMatch = url.pathname.match(
     /^\/api\/v1\/coverage\/([a-z0-9-]+)\/checker-interface$/,
   );
+  const interactionMatch = url.pathname.match(
+    /^\/api\/v1\/coverage\/([a-z0-9-]+)\/checker-interaction$/,
+  );
   const addressMatch = url.pathname.match(
     /^\/api\/v1\/coverage\/([a-z0-9-]+)\/address$/,
   );
 
-  if (!checkerMatch && !addressMatch) return null;
+  if (!checkerMatch && !interactionMatch && !addressMatch) return null;
 
   if (!env.DATABASE) {
     return {
@@ -36,7 +42,8 @@ export async function coverageRoute(
     };
   }
 
-  const providerSlug = (checkerMatch ?? addressMatch)![1];
+  const providerSlug =
+    (checkerMatch ?? interactionMatch ?? addressMatch)![1];
 
   if (addressMatch) {
     const status = await getDatabaseStatus(env.DATABASE);
@@ -128,6 +135,37 @@ export async function coverageRoute(
       body: {
         error: "coverage_checker_not_registered",
         provider: providerSlug,
+      },
+    };
+  }
+
+  if (interactionMatch) {
+    const interaction = await getCoverageCheckerInteraction(
+      env.DATABASE,
+      source.id,
+    );
+
+    if (!interaction) {
+      return {
+        status: 404,
+        body: {
+          error: "coverage_checker_interaction_not_found",
+          provider: providerSlug,
+        },
+      };
+    }
+
+    return {
+      status: 200,
+      body: {
+        provider: providerSlug,
+        source: {
+          id: source.id,
+          slug: source.slug,
+          kind: source.kind,
+          canonical_url: source.canonical_url,
+        },
+        interaction,
       },
     };
   }
