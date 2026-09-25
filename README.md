@@ -43,6 +43,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, and typed Extraction VS3 are proven in production. The active milestone is Projection / Resolution VS4: canonical providers, Plan/PlanVersion identities, and rebuildable provider read models.
+Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, and Projection / Resolution VS4 are proven in production. The next milestone is address-scoped coverage and orderability: normalized location subjects, address-checker evidence, coverage claims, and rebuildable availability projections.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
