@@ -13,6 +13,9 @@ function serializeSource(source: SourceDefinition) {
     name: source.name,
     canonical_url: source.canonical_url,
     provider_candidate_name: source.provider_candidate_name,
+    collection_enabled: source.collection_enabled,
+    crawl_enabled: source.crawl_enabled,
+    crawl_page_budget: source.crawl_page_budget,
   };
 }
 
