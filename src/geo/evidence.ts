@@ -390,3 +390,117 @@ export async function materializePendingAddressGeoPoints(
     invalid,
   };
 }
+
+
+export async function getAddressGeoPointProvenance(
+  database: Hyperdrive,
+  addressId: string,
+): Promise<Record<string, unknown> | null> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{
+      claim_id: string;
+      claim_value: unknown;
+      claim_observed_at: Date | string;
+      claim_metadata: unknown;
+      observation_id: string;
+      observation_schema_name: string;
+      observation_schema_version: string;
+      observation_extracted_at: Date | string;
+      observation_payload: unknown;
+      source_snapshot_id: string;
+      snapshot_url: string;
+      snapshot_fetched_at: Date | string;
+      snapshot_content_hash: string;
+      snapshot_body_ref: string;
+      snapshot_fetch_metadata: unknown;
+      source_id: string;
+      source_kind: string;
+      source_name: string;
+      source_canonical_url: string | null;
+      source_metadata: unknown;
+    }>(
+      `
+        SELECT
+          c.id AS claim_id,
+          c.value AS claim_value,
+          c.observed_at AS claim_observed_at,
+          c.metadata AS claim_metadata,
+          o.id AS observation_id,
+          o.schema_name AS observation_schema_name,
+          o.schema_version AS observation_schema_version,
+          o.extracted_at AS observation_extracted_at,
+          o.payload AS observation_payload,
+          ss.id AS source_snapshot_id,
+          ss.url AS snapshot_url,
+          ss.fetched_at AS snapshot_fetched_at,
+          ss.content_hash AS snapshot_content_hash,
+          ss.body_ref AS snapshot_body_ref,
+          ss.fetch_metadata AS snapshot_fetch_metadata,
+          s.id AS source_id,
+          s.kind AS source_kind,
+          s.name AS source_name,
+          s.canonical_url AS source_canonical_url,
+          s.metadata AS source_metadata
+        FROM claims c
+        JOIN observations o
+          ON o.id = c.observation_id
+        JOIN source_snapshots ss
+          ON ss.id = c.source_snapshot_id
+        JOIN sources s
+          ON s.id = c.source_id
+        WHERE c.subject_id = $1
+          AND c.predicate = 'geo.point'
+          AND c.status = 'asserted'
+          AND o.schema_name = 'geo-point-observation'
+          AND o.validation_status = 'valid'
+        ORDER BY
+          c.observed_at DESC,
+          c.created_at DESC,
+          c.id DESC
+        LIMIT 1
+      `,
+      [addressId],
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      address_id: addressId,
+      claim: {
+        id: row.claim_id,
+        value: row.claim_value,
+        observed_at: new Date(
+          row.claim_observed_at,
+        ).toISOString(),
+        metadata: row.claim_metadata,
+      },
+      observation: {
+        id: row.observation_id,
+        schema_name: row.observation_schema_name,
+        schema_version: row.observation_schema_version,
+        extracted_at: new Date(
+          row.observation_extracted_at,
+        ).toISOString(),
+        payload: row.observation_payload,
+      },
+      snapshot: {
+        id: row.source_snapshot_id,
+        url: row.snapshot_url,
+        fetched_at: new Date(
+          row.snapshot_fetched_at,
+        ).toISOString(),
+        content_hash: row.snapshot_content_hash,
+        body_ref: row.snapshot_body_ref,
+        fetch_metadata: row.snapshot_fetch_metadata,
+      },
+      source: {
+        id: row.source_id,
+        kind: row.source_kind,
+        name: row.source_name,
+        canonical_url: row.source_canonical_url,
+        metadata: row.source_metadata,
+      },
+    };
+  });
+}
