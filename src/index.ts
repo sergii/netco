@@ -1,6 +1,7 @@
 import { sourceRoute } from "./routes/sources";
 import { evidenceRoute } from "./routes/evidence";
 import { getDatabaseStatus } from "./db/status";
+import { collectScheduledSources } from "./evidence/collector";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
@@ -157,5 +158,20 @@ export default {
       404,
       headers,
     );
+  },
+  async scheduled(
+    _event: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    if (!env.SNAPSHOTS || !env.DATABASE) {
+      console.error("scheduled_collection_bindings_unavailable", {
+        snapshots: Boolean(env.SNAPSHOTS),
+        database: Boolean(env.DATABASE),
+      });
+      return;
+    }
+
+    ctx.waitUntil(collectScheduledSources(env.SNAPSHOTS, env.DATABASE));
   },
 } satisfies ExportedHandler<Env>;
