@@ -20,3 +20,5 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/lanet/checker-interaction
+
+# dump rerun: 2026-09-25T15:48Z
