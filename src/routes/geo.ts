@@ -70,12 +70,14 @@ export async function geoRoute(
       };
     }
 
+    const proof = await materializeVs11TrustedGeoFixture(
+      env.SNAPSHOTS,
+      env.DATABASE,
+    );
+
     return {
       status: 200,
-      body: await materializeVs11TrustedGeoFixture(
-        env.SNAPSHOTS,
-        env.DATABASE,
-      ),
+      body: { ...proof },
     };
   }
 
