@@ -1,8 +1,19 @@
-import { SOURCES, findSource } from "../sources/registry";
+import { SOURCES, findSource, type SourceDefinition } from "../sources/registry";
 
 export interface SourceRouteResult {
   status: number;
-  body: Record<string, unknown>;
+  body: unknown;
+}
+
+function serializeSource(source: SourceDefinition) {
+  return {
+    id: source.id,
+    slug: source.slug,
+    kind: source.kind,
+    name: source.name,
+    canonical_url: source.canonical_url,
+    provider_candidate_name: source.provider_candidate_name,
+  };
 }
 
 export function sourceRoute(pathname: string): SourceRouteResult | null {
@@ -10,7 +21,7 @@ export function sourceRoute(pathname: string): SourceRouteResult | null {
     return {
       status: 200,
       body: {
-        sources: SOURCES,
+        sources: SOURCES.map(serializeSource),
       },
     };
   }
@@ -34,6 +45,8 @@ export function sourceRoute(pathname: string): SourceRouteResult | null {
 
   return {
     status: 200,
-    body: { source },
+    body: {
+      source: serializeSource(source),
+    },
   };
 }
