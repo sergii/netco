@@ -1,0 +1,80 @@
+name: VS7 Coverage Inventory Production Smoke
+
+on:
+  push:
+    branches:
+      - test/vs7-coverage-inventory-production-smoke
+    paths:
+      - ".github/workflows/vs7-coverage-inventory-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify coverage inventory freshness semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          all="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/addresses?freshness=all")"
+          fresh="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/addresses?freshness=fresh")"
+          stale="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/addresses?freshness=stale")"
+
+          status="$(curl -sS -o /tmp/invalid.json -w '%{http_code}'             "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/addresses?freshness=banana")"
+          test "$status" = "400"
+
+          ALL="$all" FRESH="$fresh" STALE="$stale" node --input-type=module <<'NODE'
+          const all = JSON.parse(process.env.ALL);
+          const fresh = JSON.parse(process.env.FRESH);
+          const stale = JSON.parse(process.env.STALE);
+
+          const key = "ua||київ|клавдіївська|40а||";
+          const find = (payload) =>
+            payload.addresses?.find(
+              (entry) => entry.address?.normalized_key === key,
+            );
+
+          const target = find(all);
+          const freshTarget = find(fresh);
+          const staleTarget = find(stale);
+
+          if (!target) throw new Error("known address missing from all inventory");
+          if (!freshTarget) throw new Error("known address missing from fresh inventory");
+          if (staleTarget) throw new Error("fresh address leaked into stale inventory");
+
+          if (target.freshness_state !== "fresh") {
+            throw new Error("target freshness mismatch");
+          }
+          if (target.provider_count < 1) {
+            throw new Error("provider count mismatch");
+          }
+          if (target.availability_count < 2) {
+            throw new Error("availability count mismatch");
+          }
+
+          const technologies = new Set(target.technologies ?? []);
+          if (!technologies.has("gig")) throw new Error("GIG inventory missing");
+          if (!technologies.has("xgpon")) throw new Error("XGPON inventory missing");
+
+          const lanet = target.providers?.find((provider) => provider.slug === "lanet");
+          if (!lanet) throw new Error("Lanet inventory missing");
+
+          console.log(JSON.stringify({
+            all_count: all.count,
+            fresh_count: fresh.count,
+            stale_count: stale.count,
+            target: {
+              address: target.address,
+              freshness_state: target.freshness_state,
+              provider_count: target.provider_count,
+              availability_count: target.availability_count,
+              technologies: target.technologies,
+              provider: lanet.slug,
+              claims: lanet.availability.map((row) => row.supporting_claim_id),
+            },
+          }, null, 2));
+          NODE
