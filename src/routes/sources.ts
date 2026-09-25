@@ -9,6 +9,8 @@ function serializeSource(source: SourceDefinition) {
   return {
     id: source.id,
     slug: source.slug,
+    provider_id: source.provider_id,
+    provider_slug: source.provider_slug,
     kind: source.kind,
     name: source.name,
     canonical_url: source.canonical_url,

@@ -87,6 +87,41 @@ case "${existing_tables}" in
     ;;
 esac
 
+echo "Checking Resolution / Projection VS4 schema state..."
+projection_tables="$(
+  psql -Atq -v ON_ERROR_STOP=1 -c "
+    SELECT count(*)
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'entities',
+        'resolution_cases',
+        'resolution_candidates',
+        'resolution_evidence',
+        'resolution_decisions',
+        'plans',
+        'plan_versions',
+        'provider_profiles',
+        'provider_current_plans',
+        'provider_current_technologies'
+      );
+  "
+)"
+
+case "${projection_tables}" in
+  0)
+    echo "Applying migrations/0003_resolution_projection.sql..."
+    psql -v ON_ERROR_STOP=1 -f migrations/0003_resolution_projection.sql
+    ;;
+  10)
+    echo "Resolution / Projection VS4 migration is already applied."
+    ;;
+  *)
+    echo "Refusing to migrate a partial Resolution / Projection VS4 schema: ${projection_tables}/10 tables exist." >&2
+    exit 1
+    ;;
+esac
+
 echo "Verifying production schema..."
 verification="$(
   psql -Atq -v ON_ERROR_STOP=1 -c "
@@ -120,4 +155,29 @@ if [ "${verification}" != "5:1" ]; then
   exit 1
 fi
 
-echo "Evidence Spine production migration complete."
+projection_verification="$(
+  psql -Atq -v ON_ERROR_STOP=1 -c "
+    SELECT count(*)
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'entities',
+        'resolution_cases',
+        'resolution_candidates',
+        'resolution_evidence',
+        'resolution_decisions',
+        'plans',
+        'plan_versions',
+        'provider_profiles',
+        'provider_current_plans',
+        'provider_current_technologies'
+      );
+  "
+)"
+
+if [ "${projection_verification}" != "10" ]; then
+  echo "Projection schema verification failed: expected 10, got ${projection_verification}" >&2
+  exit 1
+fi
+
+echo "Evidence Spine + Resolution / Projection VS4 production migration complete."

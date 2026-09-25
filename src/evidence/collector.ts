@@ -3,6 +3,8 @@ import { extractRegisteredSourceIdentity, type IdentityObservation } from "./ide
 import { discoverSnapshotUrls } from "../crawl/discovery";
 import { fetchCrawlCandidates } from "../crawl/candidate-fetch";
 import { extractPendingDomainEvidence } from "../extraction/runner";
+import { rebuildProviderProjection } from "../projection/provider";
+import { getDatabaseStatus } from "../db/status";
 import {
   collectionEnabledSources,
   findSource,
@@ -123,6 +125,8 @@ export async function collectScheduledSources(
   bucket: R2Bucket,
   database: Hyperdrive,
 ): Promise<void> {
+  const databaseStatus = await getDatabaseStatus(database);
+
   for (const source of collectionEnabledSources()) {
     try {
       const result = await collectAndPersistKnownSource(
@@ -187,6 +191,18 @@ export async function collectScheduledSources(
         source,
       );
 
+      const providerProjection = databaseStatus.projection_schema_ready
+        ? await rebuildProviderProjection(database, source)
+        : {
+            status: "skipped" as const,
+            provider_id: null,
+            resolution_case_id: null,
+            plans: 0,
+            plan_versions_inserted: 0,
+            current_plans: 0,
+            current_technologies: 0,
+          };
+
       console.log("scheduled_source_collection", {
         source: source.slug,
         status: result.status,
@@ -205,6 +221,16 @@ export async function collectScheduledSources(
         domain_extraction_invalid: domainExtraction.invalid,
         domain_extraction_partial: domainExtraction.partial,
         domain_extraction_failed: domainExtraction.failed,
+        provider_projection_status: providerProjection.status,
+        provider_id: providerProjection.provider_id,
+        resolution_case_id: providerProjection.resolution_case_id,
+        projection_plans: providerProjection.plans,
+        projection_plan_versions_inserted:
+          providerProjection.plan_versions_inserted,
+        projection_current_plans:
+          providerProjection.current_plans,
+        projection_current_technologies:
+          providerProjection.current_technologies,
       });
     } catch (error) {
       console.error("scheduled_source_collection_failed", {
