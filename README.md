@@ -26,6 +26,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0005 - DIMAP-Inspired Map UX, Layer Model, Radar, and Realtime Ingestion Status](docs/rfcs/0005-dimap-map-ux-reference.md)
 - [RFC 0006 - Crawler Adapter and URL Discovery Pipeline](docs/rfcs/0006-crawler-adapter-url-discovery.md)
 - [RFC 0007 - Typed Domain Extraction and Claim Boundary](docs/rfcs/0007-typed-domain-extraction-claim-boundary.md)
+- [RFC 0008 - Provider Resolution, Plan Identity, and Rebuildable Projections](docs/rfcs/0008-provider-resolution-plan-projections.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
@@ -42,6 +43,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, and typed Extraction VS3 are proven in production. The next milestone is resolving evidence claims into first-class plan identities and rebuildable provider projections.
+Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, and typed Extraction VS3 are proven in production. The active milestone is Projection / Resolution VS4: canonical providers, Plan/PlanVersion identities, and rebuildable provider read models.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
