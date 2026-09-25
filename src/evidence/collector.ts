@@ -86,7 +86,12 @@ export async function collectAndPersistKnownSource(
     maxRedirects: 5,
   });
 
-  await persistSourceSnapshot(database, source, snapshot);
+  await persistSourceSnapshot(
+    database,
+    source,
+    snapshot,
+    { capture_kind: "source_root" },
+  );
 
   const observation = await extractRegisteredSourceIdentity(
     bucket,
