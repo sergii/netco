@@ -1,8 +1,8 @@
 import {
-  getProviderProjection,
-  listProviderProjections,
-} from "../projection/provider";
-import { getDatabaseStatus } from "../db/status";
+  getProvider,
+  listProviders,
+} from "../application/providers";
+import type { CapabilityFailure } from "../application/result";
 
 export interface ProviderRouteEnv {
   DATABASE?: Hyperdrive;
@@ -11,6 +11,25 @@ export interface ProviderRouteEnv {
 export interface ProviderRouteResult {
   status: number;
   body: Record<string, unknown>;
+}
+
+function failureResult(
+  failure: CapabilityFailure,
+): ProviderRouteResult {
+  const status =
+    failure.code === "provider_not_found"
+      ? 404
+      : failure.code === "projection_schema_unavailable"
+        ? 503
+        : 500;
+
+  return {
+    status,
+    body: {
+      error: failure.code,
+      ...(failure.details ?? {}),
+    },
+  };
 }
 
 export async function providerRoute(
@@ -31,23 +50,11 @@ export async function providerRoute(
       };
     }
 
-    const status = await getDatabaseStatus(env.DATABASE);
-    if (!status.projection_schema_ready) {
-      return {
-        status: 503,
-        body: {
-          error: "projection_schema_unavailable",
-          projection_tables: status.projection_tables,
-        },
-      };
-    }
+    const result = await listProviders(env.DATABASE);
 
-    const providers = await listProviderProjections(env.DATABASE);
-
-    return {
-      status: 200,
-      body: { providers },
-    };
+    return result.ok
+      ? { status: 200, body: result.value }
+      : failureResult(result);
   }
 
   const match = url.pathname.match(
@@ -65,34 +72,9 @@ export async function providerRoute(
     };
   }
 
-  const status = await getDatabaseStatus(env.DATABASE);
-  if (!status.projection_schema_ready) {
-    return {
-      status: 503,
-      body: {
-        error: "projection_schema_unavailable",
-        projection_tables: status.projection_tables,
-      },
-    };
-  }
+  const result = await getProvider(env.DATABASE, match[1]);
 
-  const provider = await getProviderProjection(
-    env.DATABASE,
-    match[1],
-  );
-
-  if (!provider) {
-    return {
-      status: 404,
-      body: {
-        error: "provider_not_found",
-        provider: match[1],
-      },
-    };
-  }
-
-  return {
-    status: 200,
-    body: provider,
-  };
+  return result.ok
+    ? { status: 200, body: result.value }
+    : failureResult(result);
 }
