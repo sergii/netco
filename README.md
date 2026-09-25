@@ -25,6 +25,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0004 - Cloudflare, Neon, Geospatial Intelligence, Maps, and MCP](docs/rfcs/0004-cloudflare-neon-geospatial-intelligence.md)
 - [RFC 0005 - DIMAP-Inspired Map UX, Layer Model, Radar, and Realtime Ingestion Status](docs/rfcs/0005-dimap-map-ux-reference.md)
 - [RFC 0006 - Crawler Adapter and URL Discovery Pipeline](docs/rfcs/0006-crawler-adapter-url-discovery.md)
+- [RFC 0007 - Typed Domain Extraction and Claim Boundary](docs/rfcs/0007-typed-domain-extraction-claim-boundary.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
@@ -33,6 +34,9 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [Claim V1](schemas/claim.v1.schema.json)
 - [Entity Resolution Decision V1](schemas/entity-resolution-decision.v1.schema.json)
 - [Geo Query V1](schemas/geo-query.v1.schema.json)
+- [Plan Observation V1](schemas/plan-observation.v1.schema.json)
+- [Technology Observation V1](schemas/technology-observation.v1.schema.json)
+- [Coverage Entrypoint Observation V1](schemas/coverage-entrypoint-observation.v1.schema.json)
 
 ## Current status
 

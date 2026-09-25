@@ -79,7 +79,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "crawler-bounded-fetch-vs2",
+          stage: "domain-extraction-vs3",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -87,6 +87,8 @@ export default {
             sources: true,
             url_discovery: true,
             bounded_crawl: true,
+            domain_extraction: true,
+            source_backed_claims: true,
             providers: false,
             geo: false,
             mcp: false,
@@ -148,6 +150,7 @@ export default {
             "/api/v1/sources/teremki-billing/discovery",
             "/api/v1/sources/lanet/discovery",
             "/api/v1/sources/lanet/crawl",
+            "/api/v1/sources/lanet/extractions",
           ],
         },
         200,

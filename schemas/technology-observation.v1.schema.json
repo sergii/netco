@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/technology-observation.v1.schema.json",
+  "title": "Netco Technology Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_slug", "url", "technologies"],
+  "properties": {
+    "schema_version": { "const": "technology-observation.v1" },
+    "source_slug": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "format": "uri" },
+    "page_title": { "type": ["string", "null"] },
+    "technologies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["technology", "observed_label", "evidence_marker"],
+        "properties": {
+          "technology": { "type": "string", "enum": ["gpon", "xpon", "ftth"] },
+          "observed_label": { "type": "string", "minLength": 1 },
+          "evidence_marker": { "type": "string", "minLength": 1 }
+        }
+      },
+      "uniqueItems": true
+    }
+  }
+}

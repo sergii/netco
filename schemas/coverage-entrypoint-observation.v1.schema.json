@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/coverage-entrypoint-observation.v1.schema.json",
+  "title": "Netco Coverage Entrypoint Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_slug",
+    "url",
+    "checker_kind",
+    "checker_url",
+    "geographic_hint",
+    "evidence_marker"
+  ],
+  "properties": {
+    "schema_version": { "const": "coverage-entrypoint-observation.v1" },
+    "source_slug": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "format": "uri" },
+    "page_title": { "type": ["string", "null"] },
+    "checker_kind": { "const": "address" },
+    "checker_url": { "type": "string", "format": "uri" },
+    "geographic_hint": { "type": ["string", "null"] },
+    "evidence_marker": { "type": ["string", "null"] }
+  }
+}
