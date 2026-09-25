@@ -1,0 +1,58 @@
+name: Coverage VS5 Interaction Read
+
+on:
+  push:
+    branches:
+      - test/coverage-vs5-interaction-read
+    paths:
+      - ".github/workflows/coverage-vs5-interaction-read.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      URL: https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/lanet/checker-interaction
+
+    steps:
+      - name: Wait for checker interaction evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 150); do
+            body="$(curl -fsS "$URL" 2>/dev/null || true)"
+
+            if INTERACTION_BODY="$body" node -e '
+              try {
+                const body = JSON.parse(process.env.INTERACTION_BODY || "{}");
+                const interaction = body.interaction;
+                const payload = interaction?.payload;
+                const valid =
+                  interaction?.validation_status === "valid" &&
+                  payload?.fixture?.city === "Київ" &&
+                  payload?.fixture?.street === "Клавдіївська" &&
+                  payload?.fixture?.house_number === "40А" &&
+                  payload?.street_control?.selected_label &&
+                  payload?.house_control?.selected_label;
+
+                if (valid) {
+                  console.log(JSON.stringify(body));
+                  process.exit(0);
+                }
+              } catch {}
+              process.exit(1);
+            '; then
+              exit 0
+            fi
+
+            echo "Waiting for Coverage VS5 interaction evidence (attempt $attempt/150)..."
+            sleep 5
+          done
+
+          echo "Coverage VS5 interaction evidence did not become valid in time." >&2
+          echo "$body" >&2
+          exit 1
