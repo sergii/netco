@@ -9,6 +9,13 @@ import {
 const PROBE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const SOURCE_SLUG = "lanet-coverage";
 
+export interface BrowserRunBinding {
+  quickAction(
+    action: "accessibilityTree",
+    options: Record<string, unknown>,
+  ): Promise<Response>;
+}
+
 export interface CoverageCheckerControl {
   role: string;
   name: string | null;
@@ -132,7 +139,7 @@ function parseBrowserMs(response: Response): number | null {
 }
 
 export async function probeLanetCoverageChecker(
-  browser: BrowserRun,
+  browser: BrowserRunBinding,
   bucket: R2Bucket,
   database: Hyperdrive,
 ): Promise<CoverageCheckerProbeResult> {
