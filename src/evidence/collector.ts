@@ -136,20 +136,28 @@ export async function collectScheduledSources(
           snapshot,
         );
 
-        discoveryInserted = await persistUrlDiscoveryObservation(
-          database,
-          snapshot,
-          discovery,
-        );
+        const discoveryPersistence =
+          await persistUrlDiscoveryObservation(
+            database,
+            snapshot,
+            discovery,
+          );
+
+        discoveryInserted = discoveryPersistence.inserted;
         discoveredCount = discovery.payload.discovered_count;
         crawlCandidateCount = discovery.payload.crawl_candidate_count;
+
+        const persistedDiscovery = {
+          ...discovery,
+          id: discoveryPersistence.id,
+        };
 
         const candidateResults = await fetchCrawlCandidates(
           bucket,
           database,
           source,
           snapshot,
-          discovery,
+          persistedDiscovery,
         );
 
         console.log("scheduled_crawl_candidates", {
