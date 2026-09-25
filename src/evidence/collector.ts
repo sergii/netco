@@ -39,6 +39,8 @@ export async function collectKnownSource(
   return captureHttpSnapshot(bucket, {
     url: source.canonical_url,
     sourceId: source.id,
+    allowedHosts: source.crawl_hosts,
+    maxRedirects: 5,
   });
 }
 
@@ -80,6 +82,8 @@ export async function collectAndPersistKnownSource(
   const snapshot = await captureHttpSnapshot(bucket, {
     url: source.canonical_url,
     sourceId: source.id,
+    allowedHosts: source.crawl_hosts,
+    maxRedirects: 5,
   });
 
   await persistSourceSnapshot(database, source, snapshot);
