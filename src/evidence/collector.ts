@@ -1,6 +1,7 @@
 import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
 import { extractRegisteredSourceIdentity, type IdentityObservation } from "./identity";
 import { discoverSnapshotUrls } from "../crawl/discovery";
+import { fetchCrawlCandidates } from "../crawl/candidate-fetch";
 import {
   collectionEnabledSources,
   findSource,
@@ -52,7 +53,11 @@ export async function collectAndPersistKnownSource(
     throw new Error("source_not_found");
   }
 
-  const latest = await getLatestSourceSnapshot(database, source.id);
+  const latest = await getLatestSourceSnapshot(
+    database,
+    source.id,
+    source.canonical_url,
+  );
 
   if (latest) {
     const ageMs = Date.now() - new Date(latest.fetched_at).getTime();
@@ -118,11 +123,19 @@ export async function collectScheduledSources(
 
       const snapshot =
         result.snapshot ??
-        (await getLatestSourceSnapshotRecord(database, source.id));
+        (await getLatestSourceSnapshotRecord(
+          database,
+          source.id,
+          source.canonical_url,
+        ));
 
       let discoveredCount: number | null = null;
       let crawlCandidateCount: number | null = null;
       let discoveryInserted = false;
+      let crawlAttempted = 0;
+      let crawlCollected = 0;
+      let crawlSkippedCooldown = 0;
+      let crawlFailed = 0;
 
       if (snapshot) {
         const discovery = await discoverSnapshotUrls(
@@ -138,6 +151,21 @@ export async function collectScheduledSources(
         );
         discoveredCount = discovery.payload.discovered_count;
         crawlCandidateCount = discovery.payload.crawl_candidate_count;
+
+        if (discovery.validation_status === "valid") {
+          const crawl = await fetchCrawlCandidates(
+            bucket,
+            database,
+            source,
+            snapshot.id,
+            discovery,
+          );
+
+          crawlAttempted = crawl.attempted;
+          crawlCollected = crawl.collected;
+          crawlSkippedCooldown = crawl.skipped_cooldown;
+          crawlFailed = crawl.failed;
+        }
       }
 
       console.log("scheduled_source_collection", {
@@ -148,6 +176,10 @@ export async function collectScheduledSources(
         discovered_count: discoveredCount,
         crawl_candidate_count: crawlCandidateCount,
         discovery_inserted: discoveryInserted,
+        crawl_attempted: crawlAttempted,
+        crawl_collected: crawlCollected,
+        crawl_skipped_cooldown: crawlSkippedCooldown,
+        crawl_failed: crawlFailed,
       });
     } catch (error) {
       console.error("scheduled_source_collection_failed", {

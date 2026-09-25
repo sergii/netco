@@ -1,5 +1,6 @@
 import {
   getLatestUrlDiscoveryObservation,
+  getRecentPagePurposeObservations,
   getSourceProvenance,
 } from "../evidence/postgres-store";
 import { findSource } from "../sources/registry";
@@ -16,7 +17,7 @@ export interface AsyncRouteResult {
 
 function matchSourcePath(
   pathname: string,
-  suffix: "provenance" | "discovery",
+  suffix: "provenance" | "discovery" | "crawl",
 ): string | null {
   const pattern = new RegExp(
     `^/api/v1/sources/([a-z0-9-]+)/${suffix}$`,
@@ -36,7 +37,8 @@ export async function evidenceRoute(
   const url = new URL(request.url);
   const provenanceSlug = matchSourcePath(url.pathname, "provenance");
   const discoverySlug = matchSourcePath(url.pathname, "discovery");
-  const slug = provenanceSlug ?? discoverySlug;
+  const crawlSlug = matchSourcePath(url.pathname, "crawl");
+  const slug = provenanceSlug ?? discoverySlug ?? crawlSlug;
 
   if (!slug) {
     return null;
@@ -74,6 +76,26 @@ export async function evidenceRoute(
           canonical_url: source.canonical_url,
         },
         discovery,
+      },
+    };
+  }
+
+  if (crawlSlug) {
+    const pages = await getRecentPagePurposeObservations(
+      env.DATABASE,
+      source.id,
+    );
+
+    return {
+      status: 200,
+      body: {
+        source: {
+          id: source.id,
+          slug: source.slug,
+          name: source.name,
+          canonical_url: source.canonical_url,
+        },
+        pages,
       },
     };
   }
