@@ -132,10 +132,10 @@ function extractPlans(text: string): PlanObservation["payload"]["plans"] {
 
     const speedMatch =
       segment.match(
-        /\b(\d{2,5})\b(?=[\s\S]{0,90}?(?:швидкість[\s\S]{0,30}?)?(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)\b)/i,
+        /\b(\d{2,5})\b(?=[\s\S]{0,90}?(?:швидкість[\s\S]{0,30}?)?(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)(?=\s|[,.;:)/]|$))/i,
       ) ??
       segment.match(
-        /\b(\d{2,5})\s*(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)\b/i,
+        /\b(\d{2,5})\s*(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)(?=\s|[,.;:)/]|$)/i,
       );
     const priceMatch = segment.match(
       /(?:^|\s)(\d{1,5}(?:[.,]\d{1,2})?)\s*грн(?=\s|[/.,;:)]|$)/i,
