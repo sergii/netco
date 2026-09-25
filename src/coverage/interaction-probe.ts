@@ -158,20 +158,24 @@ async function clickNamedOption(
   page: Page,
   target: string,
 ): Promise<boolean> {
-  const option = page
-    .getByRole("option")
-    .filter({ hasText: target })
-    .first();
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const option = page
+      .getByRole("option")
+      .filter({ hasText: target })
+      .first();
 
-  if (await option.count()) {
-    await option.click();
-    return true;
-  }
+    if (await option.count()) {
+      await option.click();
+      return true;
+    }
 
-  const text = page.getByText(target, { exact: false }).first();
-  if (await text.count()) {
-    await text.click();
-    return true;
+    const text = page.getByText(target, { exact: false }).first();
+    if (await text.count()) {
+      await text.click();
+      return true;
+    }
+
+    await page.waitForTimeout(250);
   }
 
   return false;
@@ -413,7 +417,7 @@ export async function probeLanetCoverageInteraction(
     const page = await browser.newPage();
 
     await page.goto(source.canonical_url, {
-      waitUntil: "networkidle",
+      waitUntil: "domcontentloaded",
       timeout: 30_000,
     });
 
