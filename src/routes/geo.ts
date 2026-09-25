@@ -6,6 +6,7 @@ import {
   type CoverageGeometryFilter,
   type CoverageViewport,
 } from "../geo/coverage-points";
+import { getCoverageH3CellFeatureCollection } from "../geo/h3-cells";
 
 export interface GeoRouteEnv {
   DATABASE?: Hyperdrive;
@@ -31,11 +32,14 @@ export async function geoRoute(
   if (request.method !== "GET") return null;
   const coveragePoints =
     url.pathname === "/api/v1/geo/coverage-points";
+  const h3Cells =
+    url.pathname === "/api/v1/geo/h3-cells";
   const enrichmentBacklog =
     url.pathname === "/api/v1/geo/enrichment-backlog";
 
   if (
     !coveragePoints &&
+    !h3Cells &&
     !enrichmentBacklog &&
     !provenanceMatch
   ) {
@@ -83,9 +87,6 @@ export async function geoRoute(
       body: await getGeoEnrichmentBacklog(env.DATABASE),
     };
   }
-
-  const requestedGeometry =
-    url.searchParams.get("geometry") ?? "all";
 
   const viewportNames = ["west", "south", "east", "north"] as const;
   const viewportValues = viewportNames.map((name) =>
@@ -138,6 +139,41 @@ export async function geoRoute(
 
     viewport = { west, south, east, north };
   }
+
+  if (h3Cells) {
+    const rawResolution = url.searchParams.get("resolution");
+    const resolution = Number(rawResolution);
+
+    if (
+      rawResolution === null ||
+      !Number.isInteger(resolution) ||
+      resolution < 0 ||
+      resolution > 15
+    ) {
+      return {
+        status: 400,
+        body: {
+          error: "h3_resolution_invalid",
+          allowed: {
+            minimum: 0,
+            maximum: 15,
+          },
+        },
+      };
+    }
+
+    return {
+      status: 200,
+      body: await getCoverageH3CellFeatureCollection(
+        env.DATABASE,
+        resolution,
+        viewport,
+      ),
+    };
+  }
+
+  const requestedGeometry =
+    url.searchParams.get("geometry") ?? "all";
 
   if (
     requestedGeometry !== "all" &&
