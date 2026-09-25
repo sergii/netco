@@ -2,6 +2,7 @@ import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
 import { extractRegisteredSourceIdentity, type IdentityObservation } from "./identity";
 import { discoverSnapshotUrls } from "../crawl/discovery";
 import { fetchCrawlCandidates } from "../crawl/candidate-fetch";
+import { extractPendingDomainEvidence } from "../extraction/runner";
 import {
   collectionEnabledSources,
   findSource,
@@ -180,6 +181,12 @@ export async function collectScheduledSources(
         }
       }
 
+      const domainExtraction = await extractPendingDomainEvidence(
+        bucket,
+        database,
+        source,
+      );
+
       console.log("scheduled_source_collection", {
         source: source.slug,
         status: result.status,
@@ -192,6 +199,12 @@ export async function collectScheduledSources(
         crawl_collected: crawlCollected,
         crawl_skipped_cooldown: crawlSkippedCooldown,
         crawl_failed: crawlFailed,
+        domain_extraction_attempted: domainExtraction.attempted,
+        domain_extraction_inserted: domainExtraction.inserted,
+        domain_claims_emitted: domainExtraction.claims_emitted,
+        domain_extraction_invalid: domainExtraction.invalid,
+        domain_extraction_partial: domainExtraction.partial,
+        domain_extraction_failed: domainExtraction.failed,
       });
     } catch (error) {
       console.error("scheduled_source_collection_failed", {
