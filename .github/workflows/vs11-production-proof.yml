@@ -54,8 +54,13 @@ jobs:
           if (feature.geometry?.type !== "Point") throw new Error("Point geometry missing");
 
           const [lon, lat] = feature.geometry.coordinates;
-          if (lat !== 50.4784296 || lon !== 30.3402236) {
-            throw new Error("GeoJSON coordinate mismatch");
+          if (
+            Math.abs(lat - 50.4784296) > 0.000001 ||
+            Math.abs(lon - 30.3402236) > 0.000001
+          ) {
+            throw new Error(
+              "GeoJSON coordinate mismatch: " + JSON.stringify({ lat, lon }),
+            );
           }
 
           if ((backlog.items ?? []).some((item) => item.address_id === proof.address_id)) {
@@ -64,6 +69,12 @@ jobs:
 
           if (provenance.claim?.id !== proof.claim_id) {
             throw new Error("claim provenance mismatch");
+          }
+          if (
+            provenance.claim?.value?.latitude !== 50.4784296 ||
+            provenance.claim?.value?.longitude !== 30.3402236
+          ) {
+            throw new Error("source precision was not preserved in claim");
           }
           if (provenance.observation?.id !== proof.observation_id) {
             throw new Error("observation provenance mismatch");
