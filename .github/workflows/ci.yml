@@ -8,13 +8,28 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: netco-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  typecheck:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - run: npm run typecheck
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Verify Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.jsonc
