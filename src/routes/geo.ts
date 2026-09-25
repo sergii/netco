@@ -1,9 +1,6 @@
 import { getDatabaseStatus } from "../db/status";
 import { getGeoEnrichmentBacklog } from "../geo/enrichment-backlog";
-import {
-  getAddressGeoProvenance,
-  materializeVs11TrustedGeoFixture,
-} from "../geo/vs11-proof";
+import { getAddressGeoProvenance } from "../geo/provenance";
 import {
   getCoveragePointFeatureCollection,
   type CoverageGeometryFilter,
@@ -11,7 +8,6 @@ import {
 
 export interface GeoRouteEnv {
   DATABASE?: Hyperdrive;
-  SNAPSHOTS?: R2Bucket;
 }
 
 export interface GeoRouteResult {
@@ -24,10 +20,6 @@ export async function geoRoute(
   env: GeoRouteEnv,
 ): Promise<GeoRouteResult | null> {
   const url = new URL(request.url);
-  const vs11Ingest =
-    request.method === "POST" &&
-    url.pathname ===
-      "/__internal/vs11/4c0de5da-9c91-4a30-93b8-04a893f7713f";
   const provenanceMatch =
     request.method === "GET"
       ? url.pathname.match(
@@ -35,12 +27,7 @@ export async function geoRoute(
         )
       : null;
 
-  if (
-    request.method !== "GET" &&
-    !vs11Ingest
-  ) {
-    return null;
-  }
+  if (request.method !== "GET") return null;
   const coveragePoints =
     url.pathname === "/api/v1/geo/coverage-points";
   const enrichmentBacklog =
@@ -49,8 +36,7 @@ export async function geoRoute(
   if (
     !coveragePoints &&
     !enrichmentBacklog &&
-    !provenanceMatch &&
-    !vs11Ingest
+    !provenanceMatch
   ) {
     return null;
   }
@@ -59,25 +45,6 @@ export async function geoRoute(
     return {
       status: 503,
       body: { error: "database_binding_unavailable" },
-    };
-  }
-
-  if (vs11Ingest) {
-    if (!env.SNAPSHOTS) {
-      return {
-        status: 503,
-        body: { error: "snapshot_binding_unavailable" },
-      };
-    }
-
-    const proof = await materializeVs11TrustedGeoFixture(
-      env.SNAPSHOTS,
-      env.DATABASE,
-    );
-
-    return {
-      status: 200,
-      body: { ...proof },
     };
   }
 
