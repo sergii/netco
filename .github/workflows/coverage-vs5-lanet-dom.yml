@@ -1,0 +1,197 @@
+name: Coverage VS5 Lanet DOM Probe
+
+on:
+  push:
+    branches:
+      - test/coverage-vs5-lanet-dom
+    paths:
+      - ".github/workflows/coverage-vs5-lanet-dom.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+      - name: Inspect Lanet address result DOM
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "playwright";
+
+          const normalize = (value) =>
+            value.normalize("NFKC").replace(/\s+/g, " ").trim();
+
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({
+            viewport: { width: 1440, height: 1200 },
+          });
+
+          try {
+            await page.goto("https://www.lanet.ua/map/", {
+              waitUntil: "domcontentloaded",
+              timeout: 60_000,
+            });
+
+            const street = page
+              .getByRole("combobox", { name: "Виберіть вулицю" })
+              .first();
+            await street.waitFor({ state: "visible", timeout: 30_000 });
+            await street.click({ force: true });
+            try {
+              await street.fill("Клавдіївська");
+            } catch {
+              // Some Select2-style comboboxes expose a non-editable role.
+            }
+            await page.waitForTimeout(800);
+
+            let streetOption = page
+              .getByRole("option")
+              .filter({ hasText: "Клавдіївська" })
+              .first();
+            if (!(await streetOption.count())) {
+              streetOption = page.getByText("Клавдіївська", { exact: false }).first();
+            }
+            await streetOption.click({ force: true });
+
+            const continueButton = page
+              .getByRole("button", { name: /продовжити/i })
+              .first();
+            await continueButton.waitFor({ state: "visible", timeout: 20_000 });
+            console.log("CONTINUE_ENABLED", await continueButton.isEnabled());
+            await continueButton.click({ force: true });
+            await page.waitForTimeout(1_200);
+
+            const controls = await page.locator("button, input, select").evaluateAll(
+              (elements) =>
+                elements
+                  .map((element) => ({
+                    tag: element.tagName.toLowerCase(),
+                    text: (element.textContent ?? "").replace(/\s+/g, " ").trim(),
+                    ariaLabel: element.getAttribute("aria-label"),
+                    placeholder: element.getAttribute("placeholder"),
+                    value: "value" in element ? String(element.value ?? "") : null,
+                    disabled: "disabled" in element ? Boolean(element.disabled) : null,
+                    outer: element.outerHTML.slice(0, 700),
+                  }))
+                  .filter((item) =>
+                    /будинок|40.?а|house/i.test(
+                      [item.text, item.ariaLabel, item.placeholder, item.value, item.outer]
+                        .filter(Boolean)
+                        .join(" "),
+                    ),
+                  ),
+            );
+            console.log("HOUSE_CONTROLS", JSON.stringify(controls));
+
+            let selected = false;
+            const selects = page.locator("select");
+            for (let index = 0; index < (await selects.count()); index += 1) {
+              const select = selects.nth(index);
+              const options = await select.locator("option").evaluateAll((items) =>
+                items.map((item) => ({
+                  text: (item.textContent ?? "").replace(/\s+/g, " ").trim(),
+                  value: item.value,
+                })),
+              );
+              const candidate = options.find((item) =>
+                normalize(item.text).includes(normalize("40А")),
+              );
+              if (candidate) {
+                console.log("HOUSE_NATIVE_OPTION", JSON.stringify(candidate));
+                await select.selectOption(candidate.value);
+                selected = true;
+                break;
+              }
+            }
+
+            if (!selected) {
+              const houseButton = page
+                .getByRole("button", { name: /будинок/i })
+                .first();
+              if (await houseButton.count()) {
+                await houseButton.click({ force: true });
+                await page.waitForTimeout(800);
+              }
+
+              let houseOption = page
+                .getByRole("option")
+                .filter({ hasText: "40А" })
+                .first();
+              if (!(await houseOption.count())) {
+                houseOption = page.getByText("40А", { exact: false }).first();
+              }
+              console.log("HOUSE_OPTION_COUNT", await houseOption.count());
+              if (await houseOption.count()) {
+                console.log("HOUSE_OPTION_TEXT", await houseOption.innerText());
+                await houseOption.click({ force: true });
+                selected = true;
+              }
+            }
+
+            console.log("HOUSE_SELECTED", selected);
+            await page.waitForTimeout(2_500);
+
+            const bodyText = (await page.locator("body").innerText()).replace(/\r/g, "");
+            console.log("BODY_TEXT_START");
+            console.log(bodyText.slice(0, 20_000));
+            console.log("BODY_TEXT_END");
+
+            const evidence = await page.locator("body").evaluate((body) => {
+              const patterns = [
+                "40А",
+                "доступне підключення",
+                "підключення недоступне",
+                "будівництво мережі",
+                "тільки з pon",
+                "xgpon",
+              ];
+              const normalizedPatterns = patterns.map((item) =>
+                item.normalize("NFKC").toLocaleLowerCase("uk-UA"),
+              );
+
+              return [...body.querySelectorAll("*")]
+                .map((element) => {
+                  const text = (element.textContent ?? "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+                  const normalizedText = text
+                    .normalize("NFKC")
+                    .toLocaleLowerCase("uk-UA");
+                  return {
+                    tag: element.tagName.toLowerCase(),
+                    text,
+                    className:
+                      typeof element.className === "string"
+                        ? element.className
+                        : "",
+                    role: element.getAttribute("role"),
+                    ariaLabel: element.getAttribute("aria-label"),
+                    parentText: (element.parentElement?.textContent ?? "")
+                      .replace(/\s+/g, " ")
+                      .trim()
+                      .slice(0, 1_200),
+                    outer: element.outerHTML.slice(0, 1_500),
+                    matched: normalizedPatterns.some((pattern) =>
+                      normalizedText.includes(pattern),
+                    ),
+                  };
+                })
+                .filter((item) => item.matched && item.text.length <= 2_500)
+                .slice(0, 120);
+            });
+
+            console.log("EVIDENCE_DOM", JSON.stringify(evidence));
+            console.log("FINAL_URL", page.url());
+            console.log("TITLE", await page.title());
+          } finally {
+            await browser.close();
+          }
+          NODE
