@@ -6,6 +6,14 @@ function decodeEntity(entity: string): string {
       return "&";
     case "&quot;":
       return '"';
+    case "&laquo;":
+      return "«";
+    case "&raquo;":
+      return "»";
+    case "&ndash;":
+      return "–";
+    case "&mdash;":
+      return "—";
     case "&#39;":
     case "&apos;":
       return "'";
@@ -50,7 +58,10 @@ export function htmlToText(html: string): string {
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&(?:#\d+|#x[0-9a-f]+|nbsp|amp|quot|apos|lt|gt);/gi, decodeEntity)
+    .replace(
+      /&(?:#\d+|#x[0-9a-f]+|nbsp|amp|quot|apos|lt|gt|laquo|raquo|ndash|mdash);/gi,
+      decodeEntity,
+    )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -69,4 +80,17 @@ export function normalizedEvidenceText(value: string): string {
     .replace(/[\u2010-\u2015]/g, "-")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+
+export function htmlToPrimaryText(html: string): string {
+  const footerIndex = html.search(/<footer\b/i);
+  const withoutFooter =
+    footerIndex >= 0 ? html.slice(0, footerIndex) : html;
+  const text = htmlToText(withoutFooter);
+  const copyrightIndex = text.search(/\b2003\s*[-–—]\s*2026\b/);
+
+  return copyrightIndex >= 0
+    ? text.slice(0, copyrightIndex).trim()
+    : text;
 }
