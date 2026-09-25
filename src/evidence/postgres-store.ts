@@ -2,6 +2,10 @@ import type { SnapshotRecord } from "./snapshot";
 import type { IdentityObservation } from "./identity";
 import type { UrlDiscoveryObservation } from "../crawl/discovery";
 import type { PagePurposeObservation } from "../crawl/page-purpose";
+import type {
+  DomainExtractionResult,
+  DomainObservation,
+} from "../extraction/domain";
 import type { SourceDefinition } from "../sources/registry";
 import { withPostgresClient } from "../db/postgres";
 
@@ -841,6 +845,400 @@ export async function getRecentPagePurposeObservations(
       validation_status: row.validation_status,
       validation_errors: row.validation_errors,
       payload: row.payload,
+    }));
+  });
+}
+
+
+export interface PendingDomainExtractionPage {
+  snapshot: SnapshotRecord;
+  page_purpose_observation_id: string;
+  classification: string;
+}
+
+const DOMAIN_SCHEMA_NAMES = [
+  "plan-observation",
+  "technology-observation",
+  "coverage-entrypoint-observation",
+] as const;
+
+export async function getPendingDomainExtractionPages(
+  database: Hyperdrive,
+  sourceId: string,
+  limit = 10,
+): Promise<PendingDomainExtractionPage[]> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{
+      id: string;
+      source_id: string;
+      url: string;
+      fetched_at: Date | string;
+      http_status: number;
+      response_headers: Record<string, string>;
+      content_hash: string;
+      content_type: string | null;
+      content_length: string | number | null;
+      body_ref: string;
+      fetch_metadata: {
+        requested_url?: string;
+        schema_version?: string;
+      } | null;
+      page_purpose_observation_id: string;
+      classification: string;
+    }>(
+      `
+        SELECT
+          s.id,
+          s.source_id,
+          s.url,
+          s.fetched_at,
+          s.http_status,
+          s.response_headers,
+          s.content_hash,
+          s.content_type,
+          s.content_length,
+          s.body_ref,
+          s.fetch_metadata,
+          p.id AS page_purpose_observation_id,
+          p.payload->>'classification' AS classification
+        FROM source_snapshots s
+        JOIN LATERAL (
+          SELECT id, payload
+          FROM observations
+          WHERE source_snapshot_id = s.id
+            AND schema_name = 'page-purpose-observation'
+            AND validation_status = 'valid'
+          ORDER BY extracted_at DESC
+          LIMIT 1
+        ) p ON true
+        WHERE s.source_id = $1
+          AND s.fetch_metadata->>'capture_kind' = 'crawl_candidate'
+          AND p.payload->>'classification' IN ('plans', 'technology', 'coverage')
+          AND NOT EXISTS (
+            SELECT 1
+            FROM observations domain_observation
+            WHERE domain_observation.source_snapshot_id = s.id
+              AND domain_observation.schema_name = ANY($2::text[])
+              AND domain_observation.extractor = 'deterministic-domain-html'
+              AND domain_observation.extractor_version = '1'
+          )
+        ORDER BY s.fetched_at DESC
+        LIMIT $3
+      `,
+      [sourceId, [...DOMAIN_SCHEMA_NAMES], limit],
+    );
+
+    return result.rows.map((row) => ({
+      snapshot: {
+        schema_version: "source-snapshot.v1",
+        id: row.id,
+        source_id: row.source_id,
+        requested_url: row.fetch_metadata?.requested_url ?? row.url,
+        final_url: row.url,
+        fetched_at: iso(row.fetched_at),
+        http_status: row.http_status,
+        response_headers: row.response_headers ?? {},
+        content_type: row.content_type,
+        content_length:
+          row.content_length === null ? 0 : Number(row.content_length),
+        sha256: row.content_hash,
+        body_ref: row.body_ref,
+      },
+      page_purpose_observation_id: row.page_purpose_observation_id,
+      classification: row.classification,
+    }));
+  });
+}
+
+export interface PersistDomainExtractionResult {
+  observation_id: string;
+  inserted: boolean;
+  claims_emitted: number;
+}
+
+export async function persistDomainExtraction(
+  database: Hyperdrive,
+  source: SourceDefinition,
+  snapshot: SnapshotRecord,
+  pagePurposeObservationId: string,
+  extraction: DomainExtractionResult,
+): Promise<PersistDomainExtractionResult> {
+  return withPostgresClient(database, async (client) => {
+    await client.query("BEGIN");
+
+    try {
+      const observation = extraction.observation;
+
+      const inserted = await client.query<{ id: string }>(
+        `
+          INSERT INTO observations (
+            id,
+            source_snapshot_id,
+            schema_name,
+            schema_version,
+            extractor,
+            extractor_version,
+            normalizer_version,
+            extracted_at,
+            payload,
+            validation_status,
+            validation_errors
+          )
+          SELECT
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8::timestamptz,
+            $9::jsonb,
+            $10,
+            $11::jsonb
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM observations
+            WHERE source_snapshot_id = $2
+              AND schema_name = $3
+              AND schema_version = $4
+              AND extractor = $5
+              AND extractor_version = $6
+          )
+          RETURNING id
+        `,
+        [
+          observation.id,
+          snapshot.id,
+          observation.schema_name,
+          observation.schema_version,
+          observation.extractor,
+          observation.extractor_version,
+          observation.normalizer_version,
+          observation.extracted_at,
+          JSON.stringify(observation.payload),
+          observation.validation_status,
+          JSON.stringify(observation.validation_errors),
+        ],
+      );
+
+      const insertedRow = inserted.rows[0];
+
+      if (!insertedRow) {
+        const existing = await client.query<{ id: string }>(
+          `
+            SELECT id
+            FROM observations
+            WHERE source_snapshot_id = $1
+              AND schema_name = $2
+              AND schema_version = $3
+              AND extractor = $4
+              AND extractor_version = $5
+            ORDER BY extracted_at DESC
+            LIMIT 1
+          `,
+          [
+            snapshot.id,
+            observation.schema_name,
+            observation.schema_version,
+            observation.extractor,
+            observation.extractor_version,
+          ],
+        );
+
+        const row = existing.rows[0];
+        if (!row) {
+          throw new Error("domain_observation_persistence_failed");
+        }
+
+        await client.query("COMMIT");
+        return {
+          observation_id: row.id,
+          inserted: false,
+          claims_emitted: 0,
+        };
+      }
+
+      let claimsEmitted = 0;
+
+      if (
+        observation.validation_status === "valid" &&
+        extraction.claims.length > 0
+      ) {
+        await client.query(
+          `
+            INSERT INTO subjects (id, kind)
+            VALUES ($1, 'provider_candidate')
+            ON CONFLICT (id) DO NOTHING
+          `,
+          [source.subject_id],
+        );
+
+        for (const claim of extraction.claims) {
+          await client.query(
+            `
+              INSERT INTO claims (
+                id,
+                subject_id,
+                predicate,
+                value,
+                source_id,
+                source_snapshot_id,
+                observation_id,
+                observed_at,
+                extraction_confidence,
+                status,
+                metadata
+              )
+              VALUES (
+                $1,
+                $2,
+                $3,
+                $4::jsonb,
+                $5,
+                $6,
+                $7,
+                $8::timestamptz,
+                $9,
+                'asserted',
+                $10::jsonb
+              )
+            `,
+            [
+              crypto.randomUUID(),
+              source.subject_id,
+              claim.predicate,
+              JSON.stringify(claim.value),
+              source.id,
+              snapshot.id,
+              insertedRow.id,
+              snapshot.fetched_at,
+              claim.extraction_confidence,
+              JSON.stringify({
+                source_slug: source.slug,
+                page_purpose_observation_id: pagePurposeObservationId,
+                evidence_locator: {
+                  kind: "body_text_marker",
+                  body_ref: snapshot.body_ref,
+                  marker: claim.evidence_marker,
+                },
+              }),
+            ],
+          );
+
+          claimsEmitted += 1;
+        }
+      }
+
+      await client.query("COMMIT");
+
+      return {
+        observation_id: insertedRow.id,
+        inserted: true,
+        claims_emitted: claimsEmitted,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+export async function getRecentDomainExtractions(
+  database: Hyperdrive,
+  sourceId: string,
+  limit = 30,
+): Promise<Array<Record<string, unknown>>> {
+  return withPostgresClient(database, async (client) => {
+    const observations = await client.query<{
+      id: string;
+      source_snapshot_id: string;
+      schema_name: string;
+      extracted_at: Date | string;
+      validation_status: string;
+      validation_errors: unknown;
+      payload: unknown;
+    }>(
+      `
+        SELECT
+          o.id,
+          o.source_snapshot_id,
+          o.schema_name,
+          o.extracted_at,
+          o.validation_status,
+          o.validation_errors,
+          o.payload
+        FROM observations o
+        JOIN source_snapshots s
+          ON s.id = o.source_snapshot_id
+        WHERE s.source_id = $1
+          AND o.schema_name = ANY($2::text[])
+        ORDER BY o.extracted_at DESC
+        LIMIT $3
+      `,
+      [sourceId, [...DOMAIN_SCHEMA_NAMES], limit],
+    );
+
+    if (observations.rows.length === 0) {
+      return [];
+    }
+
+    const observationIds = observations.rows.map((row) => row.id);
+    const claims = await client.query<{
+      id: string;
+      observation_id: string;
+      predicate: string;
+      value: unknown;
+      extraction_confidence: string | number | null;
+      observed_at: Date | string;
+      metadata: unknown;
+    }>(
+      `
+        SELECT
+          id,
+          observation_id,
+          predicate,
+          value,
+          extraction_confidence,
+          observed_at,
+          metadata
+        FROM claims
+        WHERE observation_id = ANY($1::uuid[])
+        ORDER BY predicate, id
+      `,
+      [observationIds],
+    );
+
+    const claimsByObservation = new Map<
+      string,
+      Array<Record<string, unknown>>
+    >();
+
+    for (const claim of claims.rows) {
+      const values = claimsByObservation.get(claim.observation_id) ?? [];
+      values.push({
+        id: claim.id,
+        predicate: claim.predicate,
+        value: claim.value,
+        extraction_confidence:
+          claim.extraction_confidence === null
+            ? null
+            : Number(claim.extraction_confidence),
+        observed_at: iso(claim.observed_at),
+        metadata: claim.metadata,
+      });
+      claimsByObservation.set(claim.observation_id, values);
+    }
+
+    return observations.rows.map((row) => ({
+      id: row.id,
+      source_snapshot_id: row.source_snapshot_id,
+      schema_name: row.schema_name,
+      extracted_at: iso(row.extracted_at),
+      validation_status: row.validation_status,
+      validation_errors: row.validation_errors,
+      payload: row.payload,
+      claims: claimsByObservation.get(row.id) ?? [],
     }));
   });
 }
