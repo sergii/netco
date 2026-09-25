@@ -141,14 +141,21 @@ const RULES: readonly Rule[] = [
 ];
 
 function searchable(url: URL, anchorText: string | null): string {
-  return decodeURIComponent(
-    [
-      url.hostname,
-      url.pathname,
-      url.search,
-      anchorText ?? "",
-    ].join(" "),
-  )
+  const raw = [
+    url.hostname,
+    url.pathname,
+    url.search,
+    anchorText ?? "",
+  ].join(" ");
+
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    // Malformed percent-encoding is evidence too; classification can use raw text.
+  }
+
+  return decoded
     .toLocaleLowerCase()
     .replace(/[._/+?=&%-]+/g, " ");
 }
