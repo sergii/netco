@@ -42,6 +42,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-The next implementation milestone is the Evidence Spine vertical slice: source snapshot -> validated observation -> claims -> provenance view.
+Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, and typed Extraction VS3 are proven in production. The next milestone is resolving evidence claims into first-class plan identities and rebuildable provider projections.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
