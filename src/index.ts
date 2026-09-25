@@ -14,11 +14,13 @@ import type { BrowserWorker } from "@cloudflare/playwright";
 import { explorerPage } from "./ui/explorer";
 import { apiDocsPage } from "./ui/api-docs";
 import OPENAPI_DOCUMENT from "../openapi/openapi.json";
+import { handleMcpRequest } from "./mcp";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
   DATABASE?: Hyperdrive;
   BROWSER?: BrowserWorker;
+  MCP_TOKEN?: string;
 }
 
 type JsonValue =
@@ -62,6 +64,10 @@ export default {
     const id = requestId(request);
     const headers = { "x-request-id": id };
     const bindings = runtimeBindingState(env);
+
+    if (request.method === "POST" && url.pathname === "/mcp") {
+      return handleMcpRequest(request, env, id);
+    }
 
     if (request.method === "GET" && url.pathname === "/") {
       return explorerPage();
