@@ -1,0 +1,74 @@
+name: Extraction VS3 Read Acceptance
+
+on:
+  push:
+    branches:
+      - test/extraction-vs3-read
+    paths:
+      - ".github/workflows/extraction-vs3-read.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      URL: https://netco.sergii-ponomarov.workers.dev/api/v1/sources/lanet/extractions
+
+    steps:
+      - name: Wait for typed observations and claims
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 72); do
+            body="$(curl -fsS "$URL" 2>/dev/null || true)"
+
+            if EXTRACTIONS_BODY="$body" node -e '
+              try {
+                const body = JSON.parse(process.env.EXTRACTIONS_BODY || "{}");
+                const rows = body.extractions;
+                if (!Array.isArray(rows)) process.exit(1);
+
+                const bySchema = new Map(rows.map(row => [row.schema_name, row]));
+                const plan = bySchema.get("plan-observation");
+                const technology = bySchema.get("technology-observation");
+                const coverage = bySchema.get("coverage-entrypoint-observation");
+
+                const predicates = rows.flatMap(row =>
+                  Array.isArray(row.claims)
+                    ? row.claims.map(claim => claim.predicate)
+                    : []
+                );
+
+                const valid =
+                  plan?.validation_status === "valid" &&
+                  Array.isArray(plan?.payload?.plans) &&
+                  plan.payload.plans.length > 0 &&
+                  technology?.validation_status === "valid" &&
+                  Array.isArray(technology?.payload?.technologies) &&
+                  technology.payload.technologies.length > 0 &&
+                  coverage?.validation_status === "valid" &&
+                  predicates.includes("plan.catalog_entry") &&
+                  predicates.includes("service.technology") &&
+                  predicates.includes("coverage.checker_entrypoint");
+
+                if (valid) {
+                  console.log(JSON.stringify(body));
+                  process.exit(0);
+                }
+              } catch {}
+              process.exit(1);
+            '; then
+              exit 0
+            fi
+
+            echo "Waiting for Extraction VS3 production evidence (attempt $attempt/72)..."
+            sleep 5
+          done
+
+          echo "Extraction VS3 evidence did not become ready in time." >&2
+          echo "$body" >&2
+          exit 1
