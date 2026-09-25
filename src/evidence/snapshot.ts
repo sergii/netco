@@ -17,6 +17,8 @@ export interface CaptureSnapshotInput {
   url: string;
   sourceId?: string | null;
   maxBytes?: number;
+  allowedHosts?: readonly string[];
+  maxRedirects?: number;
 }
 
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
@@ -69,20 +71,76 @@ async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   ).join("");
 }
 
+function assertAllowedHost(
+  url: URL,
+  allowedHosts: readonly string[] | undefined,
+): void {
+  if (!allowedHosts || allowedHosts.length === 0) {
+    return;
+  }
+
+  const allowed = new Set(
+    allowedHosts.map((host) => host.toLocaleLowerCase()),
+  );
+
+  if (!allowed.has(url.hostname.toLocaleLowerCase())) {
+    throw new Error("redirect_host_not_allowed");
+  }
+}
+
+async function fetchWithRedirectPolicy(
+  requestedUrl: URL,
+  input: CaptureSnapshotInput,
+): Promise<{ response: Response; finalUrl: URL }> {
+  const maxRedirects = input.maxRedirects ?? 5;
+  let currentUrl = requestedUrl;
+
+  for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
+    assertAllowedHost(currentUrl, input.allowedHosts);
+
+    const response = await fetch(currentUrl, {
+      redirect: "manual",
+      headers: {
+        "user-agent": "Netco/0.1 (+https://github.com/sergii/netco)",
+        accept:
+          "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.1",
+      },
+    });
+
+    if (
+      response.status < 300 ||
+      response.status >= 400 ||
+      !response.headers.get("location")
+    ) {
+      return { response, finalUrl: currentUrl };
+    }
+
+    if (redirectCount === maxRedirects) {
+      throw new Error("too_many_redirects");
+    }
+
+    const nextUrl = normalizeEvidenceUrl(
+      new URL(response.headers.get("location")!, currentUrl).toString(),
+    );
+    assertAllowedHost(nextUrl, input.allowedHosts);
+    currentUrl = nextUrl;
+  }
+
+  throw new Error("too_many_redirects");
+}
+
 export async function captureHttpSnapshot(
   bucket: R2Bucket,
   input: CaptureSnapshotInput,
 ): Promise<SnapshotRecord> {
   const requestedUrl = normalizeEvidenceUrl(input.url);
   const maxBytes = input.maxBytes ?? DEFAULT_MAX_BYTES;
+  assertAllowedHost(requestedUrl, input.allowedHosts);
 
-  const response = await fetch(requestedUrl, {
-    redirect: "follow",
-    headers: {
-      "user-agent": "Netco/0.1 (+https://github.com/sergii/netco)",
-      accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.1",
-    },
-  });
+  const { response, finalUrl } = await fetchWithRedirectPolicy(
+    requestedUrl,
+    input,
+  );
 
   const declaredLength = Number(response.headers.get("content-length") ?? "0");
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
@@ -114,7 +172,7 @@ export async function captureHttpSnapshot(
     id: snapshotId,
     source_id: input.sourceId ?? null,
     requested_url: requestedUrl.toString(),
-    final_url: response.url || requestedUrl.toString(),
+    final_url: finalUrl.toString(),
     fetched_at: new Date().toISOString(),
     http_status: response.status,
     response_headers: safeResponseHeaders(response.headers),
