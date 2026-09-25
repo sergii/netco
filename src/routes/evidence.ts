@@ -1,5 +1,6 @@
 import {
   getLatestUrlDiscoveryObservation,
+  getRecentDomainExtractions,
   getRecentPagePurposeObservations,
   getSourceProvenance,
 } from "../evidence/postgres-store";
@@ -17,7 +18,7 @@ export interface AsyncRouteResult {
 
 function matchSourcePath(
   pathname: string,
-  suffix: "provenance" | "discovery" | "crawl",
+  suffix: "provenance" | "discovery" | "crawl" | "extractions",
 ): string | null {
   const pattern = new RegExp(
     `^/api/v1/sources/([a-z0-9-]+)/${suffix}$`,
@@ -38,7 +39,9 @@ export async function evidenceRoute(
   const provenanceSlug = matchSourcePath(url.pathname, "provenance");
   const discoverySlug = matchSourcePath(url.pathname, "discovery");
   const crawlSlug = matchSourcePath(url.pathname, "crawl");
-  const slug = provenanceSlug ?? discoverySlug ?? crawlSlug;
+  const extractionsSlug = matchSourcePath(url.pathname, "extractions");
+  const slug =
+    provenanceSlug ?? discoverySlug ?? crawlSlug ?? extractionsSlug;
 
   if (!slug) {
     return null;
@@ -57,6 +60,26 @@ export async function evidenceRoute(
     return {
       status: 503,
       body: { error: "database_binding_unavailable" },
+    };
+  }
+
+  if (extractionsSlug) {
+    const extractions = await getRecentDomainExtractions(
+      env.DATABASE,
+      source.id,
+    );
+
+    return {
+      status: 200,
+      body: {
+        source: {
+          id: source.id,
+          slug: source.slug,
+          name: source.name,
+          canonical_url: source.canonical_url,
+        },
+        extractions,
+      },
     };
   }
 
