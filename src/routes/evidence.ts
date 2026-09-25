@@ -1,4 +1,7 @@
-import { getSourceProvenance } from "../evidence/postgres-store";
+import {
+  getLatestUrlDiscoveryObservation,
+  getSourceProvenance,
+} from "../evidence/postgres-store";
 import { findSource } from "../sources/registry";
 
 export interface EvidenceRouteEnv {
@@ -11,9 +14,28 @@ export interface AsyncRouteResult {
   headers?: Record<string, string>;
 }
 
-function matchSourceProvenancePath(pathname: string): string | null {
+function matchSourcePath(
+  pathname: string,
+  suffix: "provenance" | "discovery",
+): string | null {
   return pathname.match(
-    /^\/api\/v1\/sources\/([a-z0-9-]+)\/provenance$/,
+    new RegExp(`^/api/v1/sources/([a-z0-9-]+)/${suffix}import {
+  getLatestUrlDiscoveryObservation,
+  getSourceProvenance,
+} from "../evidence/postgres-store";
+import { findSource } from "../sources/registry";
+
+export interface EvidenceRouteEnv {
+  DATABASE?: Hyperdrive;
+}
+
+export interface AsyncRouteResult {
+  status: number;
+  body: Record<string, unknown>;
+  headers?: Record<string, string>;
+}
+
+),
   )?.[1] ?? null;
 }
 
@@ -26,11 +48,11 @@ export async function evidenceRoute(
   }
 
   const url = new URL(request.url);
-  const slug = matchSourceProvenancePath(url.pathname);
+  const provenanceSlug = matchSourcePath(url.pathname, "provenance");
+  const discoverySlug = matchSourcePath(url.pathname, "discovery");
+  const slug = provenanceSlug ?? discoverySlug;
 
-  if (!slug) {
-    return null;
-  }
+  if (!slug) return null;
 
   const source = findSource(slug);
 
@@ -45,6 +67,26 @@ export async function evidenceRoute(
     return {
       status: 503,
       body: { error: "database_binding_unavailable" },
+    };
+  }
+
+  if (discoverySlug) {
+    const discovery = await getLatestUrlDiscoveryObservation(
+      env.DATABASE,
+      source.id,
+    );
+
+    return {
+      status: 200,
+      body: {
+        source: {
+          id: source.id,
+          slug: source.slug,
+          name: source.name,
+          canonical_url: source.canonical_url,
+        },
+        discovery,
+      },
     };
   }
 
