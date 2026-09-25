@@ -29,6 +29,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0008 - Provider Resolution, Plan Identity, and Rebuildable Projections](docs/rfcs/0008-provider-resolution-plan-projections.md)
 - [RFC 0009 - Address-Scoped Coverage and Orderability](docs/rfcs/0009-address-scoped-coverage-orderability.md)
 - [RFC 0010 - Multi-Provider Address Availability](docs/rfcs/0010-multi-provider-address-availability.md)
+- [RFC 0011 - Provider Probing and Collection Boundary](docs/rfcs/0011-provider-probing-collection-boundary.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts

@@ -182,3 +182,21 @@ A map built from one provider proves rendering, not the provider-agnostic domain
 VS6 first proves that address-scoped availability can be collected and queried consistently across independent provider implementations.
 
 Only then should Netco aggregate that data spatially.
+
+## Collection-policy narrowing
+
+RFC 0011 supersedes the assumption that VS6 must immediately prove a second live provider adapter.
+
+The next implementation step may remain provider-agnostic while reading only already persisted projections.
+
+In particular:
+
+    existing persisted provider data
+      -> normalized Address
+      -> aggregated address-centric read API
+
+does not require any new provider probing.
+
+Kyivstar and other second-provider live adapters are deferred until their collection policy is explicitly approved.
+
+One bounded technical probe may still be used for future architecture research when needed, but it must stop after a confirmed technical conclusion and must not turn into recurring collection.
