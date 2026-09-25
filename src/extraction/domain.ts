@@ -38,6 +38,7 @@ interface ObservationBase {
 export interface PlanObservation extends ObservationBase {
   schema_name: "plan-observation";
   payload: {
+    schema_version: "plan-observation.v1";
     source_slug: string;
     url: string;
     page_title: string | null;
@@ -57,6 +58,7 @@ export interface PlanObservation extends ObservationBase {
 export interface TechnologyObservation extends ObservationBase {
   schema_name: "technology-observation";
   payload: {
+    schema_version: "technology-observation.v1";
     source_slug: string;
     url: string;
     page_title: string | null;
@@ -71,6 +73,7 @@ export interface TechnologyObservation extends ObservationBase {
 export interface CoverageEntrypointObservation extends ObservationBase {
   schema_name: "coverage-entrypoint-observation";
   payload: {
+    schema_version: "coverage-entrypoint-observation.v1";
     source_slug: string;
     url: string;
     page_title: string | null;
@@ -234,6 +237,7 @@ function invalidForSnapshot(
         ...common,
         schema_name: schemaName,
         payload: {
+          schema_version: "plan-observation.v1",
           source_slug: source.slug,
           url: snapshot.final_url,
           page_title: pageTitle,
@@ -250,6 +254,7 @@ function invalidForSnapshot(
         ...common,
         schema_name: schemaName,
         payload: {
+          schema_version: "technology-observation.v1",
           source_slug: source.slug,
           url: snapshot.final_url,
           page_title: pageTitle,
@@ -265,6 +270,7 @@ function invalidForSnapshot(
       ...common,
       schema_name: schemaName,
       payload: {
+        schema_version: "coverage-entrypoint-observation.v1",
         source_slug: source.slug,
         url: snapshot.final_url,
         page_title: pageTitle,
@@ -327,6 +333,7 @@ export async function extractDomainEvidence(
       validation_errors:
         plans.length > 0 ? [] : [{ code: "no_plan_cards_extracted" }],
       payload: {
+        schema_version: "plan-observation.v1",
         source_slug: source.slug,
         url: snapshot.final_url,
         page_title: pageTitle,
@@ -390,6 +397,7 @@ export async function extractDomainEvidence(
           ? []
           : [{ code: "no_supported_technology_marker" }],
       payload: {
+        schema_version: "technology-observation.v1",
         source_slug: source.slug,
         url: snapshot.final_url,
         page_title: pageTitle,
