@@ -55,7 +55,18 @@ export async function extractRegisteredSourceIdentity(
     throw new Error("snapshot_body_missing");
   }
 
-  const text = await body.text();
+  const bytes = await body.arrayBuffer();
+  const charset = snapshot.content_type
+    ?.match(/charset\s*=\s*["']?([^;"'\s]+)/i)?.[1]
+    ?.trim();
+
+  let text: string;
+  try {
+    text = new TextDecoder(charset || "utf-8").decode(bytes);
+  } catch {
+    text = new TextDecoder("utf-8").decode(bytes);
+  }
+
   const normalizedBody = normalizeText(text);
 
   const matchedIdentityMarkers = source.identity_markers.filter((marker) =>
