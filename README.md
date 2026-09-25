@@ -38,6 +38,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-The next implementation milestone is the Evidence Spine vertical slice: source snapshot -> validated observation -> claims -> provenance view.
+Evidence Spine VS1 and deterministic Crawler Discovery VS1 are proven in production. The active milestone is Crawler VS2: bounded candidate-page fetch -> immutable snapshot -> page-purpose observation.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
