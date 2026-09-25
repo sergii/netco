@@ -56,13 +56,13 @@ jobs:
           echo "Production Evidence Spine did not become ready in time." >&2
           exit 1
 
-      - name: Collect Teremki source
+      - name: Collect Teremki billing source
         shell: bash
         run: |
           set -euo pipefail
 
           body="$(
-            curl -fsS               -X POST               "$BASE_URL/api/v1/sources/teremki/collect"
+            curl -fsS               -X POST               "$BASE_URL/api/v1/sources/teremki-billing/collect"
           )"
 
           echo "$body"
@@ -91,7 +91,7 @@ jobs:
           set -euo pipefail
 
           body="$(
-            curl -fsS               "$BASE_URL/api/v1/sources/teremki/provenance"
+            curl -fsS               "$BASE_URL/api/v1/sources/teremki-billing/provenance"
           )"
 
           echo "$body"
