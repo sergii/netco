@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/claim.v1.schema.json",
+  "title": "Netco Claim V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "subject_id",
+    "predicate",
+    "value",
+    "source_id",
+    "observed_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "claim.v1"
+    },
+    "subject_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "predicate": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "value": {},
+    "scope_subject_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "source_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "source_snapshot_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "observation_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_from": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "valid_to": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "extraction_confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "asserted",
+        "retracted",
+        "superseded",
+        "rejected"
+      ],
+      "default": "asserted"
+    },
+    "supersedes_claim_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
