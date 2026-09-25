@@ -1,0 +1,131 @@
+name: VS6 Kyivstar Checker Probe
+
+on:
+  push:
+    branches:
+      - test/vs6-kyivstar-checker-probe
+    paths:
+      - ".github/workflows/vs6-kyivstar-checker-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+      - name: Inspect Kyivstar coverage checker
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "playwright";
+
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({
+            viewport: { width: 1440, height: 1200 },
+          });
+
+          try {
+            await page.goto("https://kyivstar.ua/home-internet", {
+              waitUntil: "domcontentloaded",
+              timeout: 60_000,
+            });
+            await page.waitForTimeout(2_500);
+
+            const cookieButtons = page.getByRole("button");
+            const cookieTexts = await cookieButtons.allTextContents();
+            for (let i = 0; i < cookieTexts.length; i += 1) {
+              if (/прийняти|accept|ок|згод/i.test(cookieTexts[i] ?? "")) {
+                try {
+                  await cookieButtons.nth(i).click({ force: true });
+                  await page.waitForTimeout(500);
+                  break;
+                } catch {}
+              }
+            }
+
+            const controls = await page.locator(
+              "button, a, input, select, [role=button], [role=combobox], [role=dialog]"
+            ).evaluateAll((elements) =>
+              elements
+                .map((element) => ({
+                  tag: element.tagName.toLowerCase(),
+                  role: element.getAttribute("role"),
+                  text: (element.textContent ?? "").replace(/\s+/g, " ").trim(),
+                  ariaLabel: element.getAttribute("aria-label"),
+                  placeholder: element.getAttribute("placeholder"),
+                  type: element.getAttribute("type"),
+                  href: element.getAttribute("href"),
+                  value: "value" in element ? String(element.value ?? "") : null,
+                  outer: element.outerHTML.slice(0, 900),
+                }))
+                .filter((item) =>
+                  /покрит|адрес|міст|вулиц|будин|перевір|coverage|address/i.test(
+                    [item.text, item.ariaLabel, item.placeholder, item.href, item.outer]
+                      .filter(Boolean)
+                      .join(" "),
+                  ),
+                )
+                .slice(0, 150),
+            );
+
+            console.log("INITIAL_CONTROLS", JSON.stringify(controls));
+
+            const coverageCandidates = [
+              page.getByRole("button", { name: /перевір/i }),
+              page.getByRole("link", { name: /перевір/i }),
+              page.getByText(/перевірити.*покрит/i, { exact: false }),
+            ];
+
+            let clicked = false;
+            for (const candidate of coverageCandidates) {
+              if (await candidate.count()) {
+                try {
+                  await candidate.first().click({ force: true });
+                  clicked = true;
+                  console.log("CLICKED", await candidate.first().innerText().catch(() => ""));
+                  break;
+                } catch {}
+              }
+            }
+
+            console.log("COVERAGE_TRIGGER_CLICKED", clicked);
+            await page.waitForTimeout(1_500);
+
+            const after = await page.locator(
+              "button, a, input, select, [role=button], [role=combobox], [role=dialog], form"
+            ).evaluateAll((elements) =>
+              elements
+                .map((element) => ({
+                  tag: element.tagName.toLowerCase(),
+                  role: element.getAttribute("role"),
+                  text: (element.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 1200),
+                  ariaLabel: element.getAttribute("aria-label"),
+                  placeholder: element.getAttribute("placeholder"),
+                  type: element.getAttribute("type"),
+                  name: element.getAttribute("name"),
+                  value: "value" in element ? String(element.value ?? "") : null,
+                  outer: element.outerHTML.slice(0, 1200),
+                }))
+                .filter((item) =>
+                  /покрит|адрес|міст|вулиц|будин|населен|перевір|coverage|address/i.test(
+                    [item.text, item.ariaLabel, item.placeholder, item.name, item.outer]
+                      .filter(Boolean)
+                      .join(" "),
+                  ),
+                )
+                .slice(0, 200),
+            );
+
+            console.log("AFTER_TRIGGER_CONTROLS", JSON.stringify(after));
+            console.log("FINAL_URL", page.url());
+          } finally {
+            await browser.close();
+          }
+          NODE
