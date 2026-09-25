@@ -1,0 +1,38 @@
+name: VS11 Nominatim Bounded Probe
+
+on:
+  push:
+    branches:
+      - test/vs11-nominatim-bounded-probe
+    paths:
+      - ".github/workflows/vs11-nominatim-bounded-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Geocode one public acceptance fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response="$(curl -fsS --get             -H "User-Agent: Netco/0.1 (https://github.com/sergii/netco)"             --data-urlencode "q=Київ, Клавдіївська 40А, Україна"             --data-urlencode "format=jsonv2"             --data-urlencode "addressdetails=1"             --data-urlencode "limit=3"             "https://nominatim.openstreetmap.org/search")"
+
+          RESPONSE="$response" node --input-type=module <<'NODE'
+          const rows = JSON.parse(process.env.RESPONSE);
+          console.log(JSON.stringify(rows.map((row) => ({
+            place_id: row.place_id,
+            osm_type: row.osm_type,
+            osm_id: row.osm_id,
+            lat: row.lat,
+            lon: row.lon,
+            category: row.category,
+            type: row.type,
+            display_name: row.display_name,
+            address: row.address,
+          })), null, 2));
+          NODE
