@@ -402,3 +402,94 @@ No automatic `unavailable` claim is emitted until a separate production fixture 
 Orderability interpretation runs as a separate materialization step after the immutable interaction snapshot is persisted. The materializer reads that exact R2 snapshot, creates or reuses the canonical Address subject, persists `coverage-orderability-observation.v1`, emits `coverage.orderable` only for a claimable deterministic result, and rebuilds `provider_address_availability`.
 
 This separation keeps raw browser evidence append-only and retryable independently from interpretation.
+
+
+## Production acceptance - 2026-09-25
+
+Coverage / Orderability VS5 completed its positive production path against the public Lanet acceptance fixture:
+
+```text
+UA
+Київ
+Клавдіївська
+40А
+```
+
+The production Browser Run interaction completed successfully and persisted immutable evidence.
+
+The materialization event proved:
+
+```text
+result = orderable
+technologies = [gig, xgpon]
+projection_rows = 2
+```
+
+Production evidence identifiers:
+
+```text
+snapshot_id    = 2af08ba1-bda1-49a7-baaf-3d01bf42376f
+observation_id = 5242508a-d4d2-4996-93e4-bba5cf5b177f
+claim_id       = 09f69117-afb0-4a0c-b52c-54e0557fe2ab
+```
+
+The read-only production API returned the same Address subject and two orderable projection rows:
+
+```text
+GET /api/v1/coverage/lanet/address
+
+address:
+  Київ, Клавдіївська, 40А
+
+availability:
+  internet / gig   / orderable
+  internet / xgpon / orderable
+```
+
+Both projection rows reference the same supporting claim:
+
+```text
+09f69117-afb0-4a0c-b52c-54e0557fe2ab
+```
+
+The acceptance path is therefore production-proven as:
+
+```text
+structured address
+  -> Address subject
+  -> Browser Run interaction
+  -> immutable snapshot
+  -> valid orderability observation
+  -> coverage.orderable claim
+  -> provider_address_availability
+  -> read-only coverage API
+```
+
+The accelerated acceptance cron is no longer required. The production schedule returns to:
+
+```text
+17 3 * * *
+```
+
+### Conservative ambiguity handling
+
+The classifier remains intentionally one-sided for VS5:
+
+```text
+proven positive contract -> orderable
+anything else            -> needs_verification
+```
+
+`needs_verification` produces no automatic `coverage.orderable` claim.
+
+A deterministic automatic `unavailable` classifier remains disabled until a separate production fixture proves the provider's address-local unavailable state.
+
+### Schema hardening follow-up
+
+The production application role remains intentionally DDL-restricted.
+
+During acceptance, the missing coverage tables were bootstrapped through an owner-level Neon path. Runtime DDL was subsequently removed in PR #45, and address creation was serialized independently from the canonical unique-index path.
+
+The positive VS5 runtime path is production-proven, but the owner-created bootstrap tables still require a separate schema-hardening reconciliation with the full constraints and indexes declared by `migrations/0004_coverage_addresses.sql`.
+
+That reconciliation is operational hardening and must not broaden the privileges of `hyperdrive-user`.
