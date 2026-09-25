@@ -64,7 +64,17 @@ export async function fetchCrawlCandidates(
         maxRedirects: 5,
       });
 
-      await persistSourceSnapshot(database, source, snapshot);
+      await persistSourceSnapshot(
+        database,
+        source,
+        snapshot,
+        {
+          capture_kind: "crawl_candidate",
+          parent_snapshot_id: discoveredFromSnapshotId,
+          expected_classification: link.classification,
+          relevance_score: link.relevance_score,
+        },
+      );
 
       const observation = buildPagePurposeObservation(
         source,
