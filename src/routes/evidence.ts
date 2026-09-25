@@ -1,10 +1,7 @@
 import {
-  getLatestUrlDiscoveryObservation,
-  getRecentDomainExtractions,
-  getRecentPagePurposeObservations,
-  getSourceProvenance,
-} from "../evidence/postgres-store";
-import { findSource } from "../sources/registry";
+  getSourceEvidence,
+  type SourceEvidenceKind,
+} from "../application/evidence";
 
 export interface EvidenceRouteEnv {
   DATABASE?: Hyperdrive;
@@ -18,7 +15,7 @@ export interface AsyncRouteResult {
 
 function matchSourcePath(
   pathname: string,
-  suffix: "provenance" | "discovery" | "crawl" | "extractions",
+  suffix: SourceEvidenceKind,
 ): string | null {
   const pattern = new RegExp(
     `^/api/v1/sources/([a-z0-9-]+)/${suffix}$`,
@@ -36,24 +33,16 @@ export async function evidenceRoute(
   }
 
   const url = new URL(request.url);
-  const provenanceSlug = matchSourcePath(url.pathname, "provenance");
-  const discoverySlug = matchSourcePath(url.pathname, "discovery");
-  const crawlSlug = matchSourcePath(url.pathname, "crawl");
-  const extractionsSlug = matchSourcePath(url.pathname, "extractions");
-  const slug =
-    provenanceSlug ?? discoverySlug ?? crawlSlug ?? extractionsSlug;
+  const matches: Array<[SourceEvidenceKind, string | null]> = [
+    ["provenance", matchSourcePath(url.pathname, "provenance")],
+    ["discovery", matchSourcePath(url.pathname, "discovery")],
+    ["crawl", matchSourcePath(url.pathname, "crawl")],
+    ["extractions", matchSourcePath(url.pathname, "extractions")],
+  ];
+  const matched = matches.find(([, slug]) => slug !== null);
 
-  if (!slug) {
+  if (!matched) {
     return null;
-  }
-
-  const source = findSource(slug);
-
-  if (!source) {
-    return {
-      status: 404,
-      body: { error: "source_not_found", source: slug },
-    };
   }
 
   if (!env.DATABASE) {
@@ -63,70 +52,23 @@ export async function evidenceRoute(
     };
   }
 
-  if (extractionsSlug) {
-    const extractions = await getRecentDomainExtractions(
-      env.DATABASE,
-      source.id,
-    );
+  const [kind, slug] = matched;
+  const result = await getSourceEvidence(
+    env.DATABASE,
+    slug!,
+    kind,
+  );
 
-    return {
-      status: 200,
-      body: {
-        source: {
-          id: source.id,
-          slug: source.slug,
-          name: source.name,
-          canonical_url: source.canonical_url,
+  return result.ok
+    ? {
+        status: 200,
+        body: result.value,
+      }
+    : {
+        status: result.code === "source_not_found" ? 404 : 500,
+        body: {
+          error: result.code,
+          ...(result.details ?? {}),
         },
-        extractions,
-      },
-    };
-  }
-
-  if (discoverySlug) {
-    const discovery = await getLatestUrlDiscoveryObservation(
-      env.DATABASE,
-      source.id,
-    );
-
-    return {
-      status: 200,
-      body: {
-        source: {
-          id: source.id,
-          slug: source.slug,
-          name: source.name,
-          canonical_url: source.canonical_url,
-        },
-        discovery,
-      },
-    };
-  }
-
-  if (crawlSlug) {
-    const pages = await getRecentPagePurposeObservations(
-      env.DATABASE,
-      source.id,
-    );
-
-    return {
-      status: 200,
-      body: {
-        source: {
-          id: source.id,
-          slug: source.slug,
-          name: source.name,
-          canonical_url: source.canonical_url,
-        },
-        pages,
-      },
-    };
-  }
-
-  const provenance = await getSourceProvenance(env.DATABASE, source);
-
-  return {
-    status: 200,
-    body: provenance as unknown as Record<string, unknown>,
-  };
+      };
 }
