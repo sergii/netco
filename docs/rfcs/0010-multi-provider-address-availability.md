@@ -200,3 +200,52 @@ does not require any new provider probing.
 Kyivstar and other second-provider live adapters are deferred until their collection policy is explicitly approved.
 
 One bounded technical probe may still be used for future architecture research when needed, but it must stop after a confirmed technical conclusion and must not turn into recurring collection.
+
+
+## Production acceptance - projection-only VS6
+
+After RFC 0011 narrowed the collection boundary, VS6 was completed as a projection-only address aggregation slice.
+
+Production endpoint:
+
+```text
+GET /api/v1/coverage/address
+```
+
+Production fixture:
+
+```text
+UA
+Київ
+Клавдіївська
+40А
+```
+
+The production response grouped persisted availability by provider and returned:
+
+```text
+lanet
+  gig   orderable
+  xgpon orderable
+```
+
+Both rows preserved supporting claim:
+
+```text
+09f69117-afb0-4a0c-b52c-54e0557fe2ab
+```
+
+A synthetic unknown address returned:
+
+```text
+address   = null
+providers = []
+```
+
+This proves the semantic boundary:
+
+```text
+no persisted evidence != unavailable
+```
+
+The endpoint performs no live provider work.
