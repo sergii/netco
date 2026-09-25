@@ -1,6 +1,23 @@
 import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
+import { extractRegisteredSourceIdentity, type IdentityObservation } from "./identity";
 import { findSource } from "../sources/registry";
-import { persistSourceSnapshot } from "./postgres-store";
+import {
+  getLatestSourceSnapshot,
+  persistIdentityObservation,
+  persistSourceSnapshot,
+} from "./postgres-store";
+
+const COLLECTION_COOLDOWN_MS = 30 * 60 * 1000;
+
+export interface CollectionResult {
+  status: "collected" | "cooldown";
+  snapshot: SnapshotRecord | null;
+  observation: IdentityObservation | null;
+  claims_emitted: number;
+  latest_snapshot_id: string | null;
+  latest_fetched_at: string | null;
+  retry_after_seconds: number;
+}
 
 export async function collectKnownSource(
   bucket: R2Bucket,
@@ -22,11 +39,31 @@ export async function collectAndPersistKnownSource(
   bucket: R2Bucket,
   database: Hyperdrive,
   slug: string,
-): Promise<SnapshotRecord> {
+): Promise<CollectionResult> {
   const source = findSource(slug);
 
   if (!source) {
     throw new Error("source_not_found");
+  }
+
+  const latest = await getLatestSourceSnapshot(database, source.id);
+
+  if (latest) {
+    const ageMs = Date.now() - new Date(latest.fetched_at).getTime();
+
+    if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < COLLECTION_COOLDOWN_MS) {
+      return {
+        status: "cooldown",
+        snapshot: null,
+        observation: null,
+        claims_emitted: 0,
+        latest_snapshot_id: latest.id,
+        latest_fetched_at: latest.fetched_at,
+        retry_after_seconds: Math.ceil(
+          (COLLECTION_COOLDOWN_MS - ageMs) / 1000,
+        ),
+      };
+    }
   }
 
   const snapshot = await captureHttpSnapshot(bucket, {
@@ -36,5 +73,26 @@ export async function collectAndPersistKnownSource(
 
   await persistSourceSnapshot(database, source, snapshot);
 
-  return snapshot;
+  const observation = await extractRegisteredSourceIdentity(
+    bucket,
+    source,
+    snapshot,
+  );
+
+  const claimsEmitted = await persistIdentityObservation(
+    database,
+    source,
+    snapshot,
+    observation,
+  );
+
+  return {
+    status: "collected",
+    snapshot,
+    observation,
+    claims_emitted: claimsEmitted,
+    latest_snapshot_id: snapshot.id,
+    latest_fetched_at: snapshot.fetched_at,
+    retry_after_seconds: Math.ceil(COLLECTION_COOLDOWN_MS / 1000),
+  };
 }
