@@ -1,11 +1,10 @@
-import { getDatabaseStatus } from "../db/status";
-import { getGeoEnrichmentBacklog } from "../geo/enrichment-backlog";
-import { getAddressGeoProvenance } from "../geo/provenance";
 import {
-  getCoveragePointFeatureCollection,
-  type CoverageGeometryFilter,
-  type CoverageViewport,
-} from "../geo/coverage-points";
+  getAddressGeoEvidence,
+  listCoveragePoints,
+  listGeoEnrichmentBacklog,
+  type CoveragePointsQuery,
+} from "../application/geo";
+import type { CapabilityFailure } from "../application/result";
 
 export interface GeoRouteEnv {
   DATABASE?: Hyperdrive;
@@ -14,6 +13,47 @@ export interface GeoRouteEnv {
 export interface GeoRouteResult {
   status: number;
   body: Record<string, unknown>;
+}
+
+function failureResult(
+  failure: CapabilityFailure,
+): GeoRouteResult {
+  const status =
+    failure.code === "geo_provenance_not_found"
+      ? 404
+      : failure.code === "coverage_schema_unavailable"
+        ? 503
+        : failure.code.startsWith("viewport_") ||
+            failure.code === "geometry_filter_invalid"
+          ? 400
+          : 500;
+
+  return {
+    status,
+    body: {
+      error: failure.code,
+      ...(failure.details ?? {}),
+    },
+  };
+}
+
+function coveragePointsQuery(url: URL): CoveragePointsQuery {
+  const viewportNames = ["west", "south", "east", "north"] as const;
+  const viewport: NonNullable<CoveragePointsQuery["viewport"]> = {};
+  let hasViewport = false;
+
+  for (const name of viewportNames) {
+    const value = url.searchParams.get(name);
+    if (value !== null) {
+      viewport[name] = Number(value);
+      hasViewport = true;
+    }
+  }
+
+  return {
+    geometry: url.searchParams.get("geometry"),
+    viewport: hasViewport ? viewport : null,
+  };
 }
 
 export async function geoRoute(
@@ -29,6 +69,7 @@ export async function geoRoute(
       : null;
 
   if (request.method !== "GET") return null;
+
   const coveragePoints =
     url.pathname === "/api/v1/geo/coverage-points";
   const enrichmentBacklog =
@@ -50,125 +91,30 @@ export async function geoRoute(
   }
 
   if (provenanceMatch) {
-    const provenance = await getAddressGeoProvenance(
+    const result = await getAddressGeoEvidence(
       env.DATABASE,
       provenanceMatch[1],
     );
 
-    return provenance
-      ? { status: 200, body: provenance }
-      : {
-          status: 404,
-          body: {
-            error: "geo_provenance_not_found",
-            address_id: provenanceMatch[1],
-          },
-        };
-  }
-
-  const status = await getDatabaseStatus(env.DATABASE);
-  if (!status.coverage_schema_ready) {
-    return {
-      status: 503,
-      body: {
-        error: "coverage_schema_unavailable",
-        coverage_tables: status.coverage_tables,
-      },
-    };
+    return result.ok
+      ? { status: 200, body: result.value }
+      : failureResult(result);
   }
 
   if (enrichmentBacklog) {
-    return {
-      status: 200,
-      body: await getGeoEnrichmentBacklog(env.DATABASE),
-    };
+    const result = await listGeoEnrichmentBacklog(env.DATABASE);
+
+    return result.ok
+      ? { status: 200, body: result.value }
+      : failureResult(result);
   }
 
-  const requestedGeometry =
-    url.searchParams.get("geometry") ?? "all";
-
-  const viewportNames = ["west", "south", "east", "north"] as const;
-  const viewportValues = viewportNames.map((name) =>
-    url.searchParams.get(name),
-  );
-  const suppliedViewportValues = viewportValues.filter(
-    (value) => value !== null,
+  const result = await listCoveragePoints(
+    env.DATABASE,
+    coveragePointsQuery(url),
   );
 
-  let viewport: CoverageViewport | null = null;
-
-  if (suppliedViewportValues.length > 0) {
-    if (suppliedViewportValues.length !== viewportNames.length) {
-      return {
-        status: 400,
-        body: {
-          error: "viewport_incomplete",
-          required: [...viewportNames],
-        },
-      };
-    }
-
-    const [west, south, east, north] = viewportValues.map(
-      (value) => Number(value),
-    );
-
-    if (
-      !Number.isFinite(west) ||
-      !Number.isFinite(south) ||
-      !Number.isFinite(east) ||
-      !Number.isFinite(north) ||
-      west < -180 ||
-      west > 180 ||
-      east < -180 ||
-      east > 180 ||
-      south < -90 ||
-      south > 90 ||
-      north < -90 ||
-      north > 90 ||
-      west >= east ||
-      south >= north
-    ) {
-      return {
-        status: 400,
-        body: {
-          error: "viewport_invalid",
-        },
-      };
-    }
-
-    viewport = { west, south, east, north };
-  }
-
-  if (
-    requestedGeometry !== "all" &&
-    requestedGeometry !== "present" &&
-    requestedGeometry !== "missing"
-  ) {
-    return {
-      status: 400,
-      body: {
-        error: "geometry_filter_invalid",
-        allowed: ["all", "present", "missing"],
-      },
-    };
-  }
-
-  if (viewport && requestedGeometry === "missing") {
-    return {
-      status: 400,
-      body: {
-        error: "viewport_requires_geometry",
-        allowed_geometry: ["all", "present"],
-      },
-    };
-  }
-
-  return {
-    status: 200,
-    body: await getCoveragePointFeatureCollection(
-      env.DATABASE,
-      requestedGeometry as CoverageGeometryFilter,
-      viewport,
-    ),
-  };
+  return result.ok
+    ? { status: 200, body: result.value }
+    : failureResult(result);
 }
