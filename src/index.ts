@@ -1,4 +1,7 @@
-export interface Env {}
+export interface Env {
+  SNAPSHOTS?: R2Bucket;
+  DATABASE?: Hyperdrive;
+}
 
 type JsonValue =
   | null
@@ -27,11 +30,32 @@ function requestId(request: Request): string {
   return request.headers.get("cf-ray") ?? crypto.randomUUID();
 }
 
+function evidenceStatus(env: Env) {
+  const snapshots = Boolean(env.SNAPSHOTS);
+  const database = Boolean(env.DATABASE);
+
+  return {
+    ready: snapshots && database,
+    bindings: {
+      snapshots,
+      database,
+    },
+    pipeline: {
+      snapshot_capture: snapshots,
+      relational_index: database,
+      observations: database,
+      claims: database,
+      provenance: snapshots && database,
+    },
+  };
+}
+
 export default {
-  async fetch(request: Request, _env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const id = requestId(request);
     const headers = { "x-request-id": id };
+    const evidence = evidenceStatus(env);
 
     if (request.method === "GET" && url.pathname === "/healthz") {
       return json(
@@ -50,9 +74,11 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "bootstrap",
+          stage: "evidence-spine-vs1",
           capabilities: {
-            evidence: false,
+            evidence: evidence.ready,
+            snapshots: evidence.bindings.snapshots,
+            database: evidence.bindings.database,
             providers: false,
             geo: false,
             mcp: false,
@@ -63,13 +89,21 @@ export default {
       );
     }
 
+    if (request.method === "GET" && url.pathname === "/api/v1/evidence/status") {
+      return json(evidence, evidence.ready ? 200 : 503, headers);
+    }
+
     if (request.method === "GET" && url.pathname === "/") {
       return json(
         {
           name: "Netco",
           description:
             "Evidence-backed internet provider and geospatial intelligence API",
-          endpoints: ["/healthz", "/api/v1/meta"],
+          endpoints: [
+            "/healthz",
+            "/api/v1/meta",
+            "/api/v1/evidence/status",
+          ],
         },
         200,
         headers,
