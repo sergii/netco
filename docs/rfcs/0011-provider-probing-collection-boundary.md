@@ -201,3 +201,28 @@ Adding a second live provider adapter is deferred until the collection policy fo
 6. Provider-specific collection requires explicit approval.
 7. Existing persisted evidence may be used without triggering new collection.
 8. A read API must never trigger live provider probing.
+
+
+## Production enforcement - 2026-09-25
+
+The collection boundary is enforced in runtime configuration, not only in documentation.
+
+Current registered provider sources have:
+
+```text
+collection_enabled = false
+```
+
+The previous scheduled Lanet Browser Run probe and interaction materialization calls were removed from the Worker scheduler.
+
+Production metadata now reports:
+
+```text
+provider_collection_enabled      = false
+coverage_checker_probe           = false
+coverage_checker_interaction     = false
+```
+
+Previously persisted evidence, claims, and projections remain readable.
+
+The daily Worker schedule may still run internal scheduled logic, but no currently registered provider source is eligible for recurring collection.
