@@ -9,6 +9,7 @@ export interface SourceDefinition {
   identity_markers: readonly string[];
   collection_enabled: boolean;
   crawl_hosts: readonly string[];
+  crawl_page_budget: number;
 }
 
 export const SOURCES: readonly SourceDefinition[] = [
@@ -23,6 +24,7 @@ export const SOURCES: readonly SourceDefinition[] = [
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: false,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
+    crawl_page_budget: 2,
   },
   {
     id: "eebfc808-4e2d-4bc8-af56-676b413a53ab",
@@ -35,6 +37,20 @@ export const SOURCES: readonly SourceDefinition[] = [
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: true,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
+    crawl_page_budget: 2,
+  },
+  {
+    id: "0d3a76b0-57d8-4b8e-b743-7d87b79f8c89",
+    subject_id: "820ee63f-3b2e-4b34-b1d5-3cc7bceab64d",
+    slug: "lanet",
+    kind: "official_website",
+    name: "Lanet official website",
+    canonical_url: "https://www.lanet.ua/",
+    provider_candidate_name: "Мережа Ланет",
+    identity_markers: ["lanet", "Мережа Ланет", "Ланет"],
+    collection_enabled: true,
+    crawl_hosts: ["lanet.ua", "www.lanet.ua"],
+    crawl_page_budget: 5,
   },
 ];
 
