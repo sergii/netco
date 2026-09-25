@@ -4,6 +4,7 @@ set -euo pipefail
 PROJECT_ID="ancient-haze-86966909"
 BRANCH="production"
 DATABASE="neondb"
+ROLE="neondb_owner"
 
 if ! command -v neon >/dev/null 2>&1; then
   echo "Neon CLI is not installed. Run: npm i -g neon@latest" >&2
@@ -17,7 +18,11 @@ if [ ! -f ".neon" ]; then
 fi
 
 psql() {
-  neon connection-string "${BRANCH}"     --project-id "${PROJECT_ID}"     --database-name "${DATABASE}"     --psql -- "$@"
+  neon connection-string "${BRANCH}" \
+    --project-id "${PROJECT_ID}" \
+    --database-name "${DATABASE}" \
+    --role-name "${ROLE}" \
+    --psql -- "$@"
 }
 
 echo "Checking required PostgreSQL extensions are available..."
