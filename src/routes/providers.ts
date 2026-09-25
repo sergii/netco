@@ -2,6 +2,7 @@ import {
   getProviderProjection,
   listProviderProjections,
 } from "../projection/provider";
+import { getDatabaseStatus } from "../db/status";
 
 export interface ProviderRouteEnv {
   DATABASE?: Hyperdrive;
@@ -30,6 +31,17 @@ export async function providerRoute(
       };
     }
 
+    const status = await getDatabaseStatus(env.DATABASE);
+    if (!status.projection_schema_ready) {
+      return {
+        status: 503,
+        body: {
+          error: "projection_schema_unavailable",
+          projection_tables: status.projection_tables,
+        },
+      };
+    }
+
     const providers = await listProviderProjections(env.DATABASE);
 
     return {
@@ -50,6 +62,17 @@ export async function providerRoute(
     return {
       status: 503,
       body: { error: "database_binding_unavailable" },
+    };
+  }
+
+  const status = await getDatabaseStatus(env.DATABASE);
+  if (!status.projection_schema_ready) {
+    return {
+      status: 503,
+      body: {
+        error: "projection_schema_unavailable",
+        projection_tables: status.projection_tables,
+      },
     };
   }
 
