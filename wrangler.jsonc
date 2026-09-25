@@ -6,6 +6,11 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "secrets": {
+    "required": [
+      "MCP_TOKEN"
+    ]
+  },
   "workers_dev": true,
   "preview_urls": false,
   "observability": {
