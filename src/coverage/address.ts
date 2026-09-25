@@ -136,6 +136,11 @@ export async function ensureAddress(
     await client.query("BEGIN");
 
     try {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+        [normalized.normalized_key],
+      );
+
       const existing = await client.query<{ id: string }>(
         `
           SELECT id
@@ -193,8 +198,6 @@ export async function ensureAddress(
             $12,
             $13
           )
-          ON CONFLICT (normalized_key)
-          DO UPDATE SET normalized_key = EXCLUDED.normalized_key
           RETURNING id
         `,
         [
@@ -215,16 +218,6 @@ export async function ensureAddress(
       );
 
       const addressId = inserted.rows[0].id;
-
-      if (addressId !== candidateId) {
-        await client.query(
-          `
-            DELETE FROM subjects
-            WHERE id = $1
-          `,
-          [candidateId],
-        );
-      }
 
       await client.query("COMMIT");
 
