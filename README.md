@@ -23,6 +23,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0002 - Ingestion, Resolution, and Enrichment Pipeline](docs/rfcs/0002-ingestion-resolution-enrichment.md)
 - [RFC 0003 - Canonical Schema and Structured Contracts](docs/rfcs/0003-canonical-schema.md)
 - [RFC 0004 - Cloudflare, Neon, Geospatial Intelligence, Maps, and MCP](docs/rfcs/0004-cloudflare-neon-geospatial-intelligence.md)
+- [RFC 0005 - DIMAP-Inspired Map UX, Layer Model, Radar, and Realtime Ingestion Status](docs/rfcs/0005-dimap-map-ux-reference.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
