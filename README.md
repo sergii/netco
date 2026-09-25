@@ -15,13 +15,23 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - Missing, stale, conflicting, and not-yet-collected data are distinct states.
 - Historical tariff, coverage, technology, and resilience changes are preserved.
 - Structured extraction must be schema-versioned and validated before it can affect canonical views.
+- Product/API queries should read rebuildable projections rather than recomputing canonical truth from raw evidence on every request.
 
 ## Documents
 
 - [RFC 0001 - Provider Knowledge Model](docs/rfcs/0001-provider-knowledge-model.md)
 - [RFC 0002 - Ingestion, Resolution, and Enrichment Pipeline](docs/rfcs/0002-ingestion-resolution-enrichment.md)
+- [RFC 0003 - Canonical Schema and Structured Contracts](docs/rfcs/0003-canonical-schema.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
+
+## Structured contracts
+
+- [Provider Observation V1](schemas/provider-observation.v1.schema.json)
+- [Claim V1](schemas/claim.v1.schema.json)
+- [Entity Resolution Decision V1](schemas/entity-resolution-decision.v1.schema.json)
 
 ## Current status
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
+
+The next implementation milestone is the Evidence Spine vertical slice: source snapshot -> validated observation -> claims -> provenance view.
