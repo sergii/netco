@@ -124,6 +124,54 @@ jobs:
             );
 
             console.log("AFTER_TRIGGER_CONTROLS", JSON.stringify(after));
+
+            console.log(
+              "FRAMES",
+              JSON.stringify(
+                page.frames().map((frame) => ({
+                  name: frame.name(),
+                  url: frame.url(),
+                })),
+              ),
+            );
+
+            for (const frame of page.frames()) {
+              try {
+                const frameControls = await frame.locator(
+                  "button, input, select, [role=button], [role=combobox], form"
+                ).evaluateAll((elements) =>
+                  elements
+                    .map((element) => ({
+                      tag: element.tagName.toLowerCase(),
+                      role: element.getAttribute("role"),
+                      text: (element.textContent ?? "").replace(/\\s+/g, " ").trim().slice(0, 900),
+                      ariaLabel: element.getAttribute("aria-label"),
+                      placeholder: element.getAttribute("placeholder"),
+                      type: element.getAttribute("type"),
+                      name: element.getAttribute("name"),
+                      value: "value" in element ? String(element.value ?? "") : null,
+                      outer: element.outerHTML.slice(0, 1000),
+                    }))
+                    .filter((item) =>
+                      /покрит|адрес|міст|вулиц|будин|населен|перевір|coverage|address/i.test(
+                        [item.text, item.ariaLabel, item.placeholder, item.name, item.outer]
+                          .filter(Boolean)
+                          .join(" "),
+                      ),
+                    )
+                    .slice(0, 100),
+                );
+                if (frameControls.length > 0) {
+                  console.log(
+                    "FRAME_CONTROLS",
+                    JSON.stringify({ url: frame.url(), controls: frameControls }),
+                  );
+                }
+              } catch {}
+            }
+
+            const bodyText = (await page.locator("body").innerText()).replace(/\\r/g, "");
+            console.log("BODY_AFTER_TRIGGER", bodyText.slice(0, 15000));
             console.log("FINAL_URL", page.url());
           } finally {
             await browser.close();
