@@ -428,6 +428,7 @@ export async function probeLanetCoverageInteraction(
       Date.now() - new Date(latest.fetched_at).getTime();
 
     if (
+      latest.validation_status === "valid" &&
       Number.isFinite(ageMs) &&
       ageMs >= 0 &&
       ageMs < INTERACTION_COOLDOWN_MS
