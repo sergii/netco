@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "worker": "netco",
+  "application": {
+    "name": "Netco Private",
+    "type": "self_hosted",
+    "destination": {
+      "type": "worker"
+    },
+    "session_duration": "168h",
+    "policy": {
+      "reuse": "Personal email(s)"
+    },
+    "public_overrides": []
+  }
+}
