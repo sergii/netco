@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# macOS ships Bash 3.2, which lacks mapfile. Provide the subset this script uses.
+if ! type mapfile >/dev/null 2>&1; then
+  mapfile() {
+    shift
+    connection_parts=()
+    while IFS= read -r line; do
+      connection_parts[${#connection_parts[@]}]="${line}"
+    done
+  }
+fi
+
 PROJECT_ID="ancient-haze-86966909"
 BRANCH="production"
 BRANCH_ID="br-solitary-violet-b2uosraz"
