@@ -18,25 +18,11 @@ function matchSourcePath(
   pathname: string,
   suffix: "provenance" | "discovery",
 ): string | null {
-  return pathname.match(
-    new RegExp(`^/api/v1/sources/([a-z0-9-]+)/${suffix}import {
-  getLatestUrlDiscoveryObservation,
-  getSourceProvenance,
-} from "../evidence/postgres-store";
-import { findSource } from "../sources/registry";
+  const pattern = new RegExp(
+    `^/api/v1/sources/([a-z0-9-]+)/${suffix}$`,
+  );
 
-export interface EvidenceRouteEnv {
-  DATABASE?: Hyperdrive;
-}
-
-export interface AsyncRouteResult {
-  status: number;
-  body: Record<string, unknown>;
-  headers?: Record<string, string>;
-}
-
-),
-  )?.[1] ?? null;
+  return pathname.match(pattern)?.[1] ?? null;
 }
 
 export async function evidenceRoute(
@@ -52,7 +38,9 @@ export async function evidenceRoute(
   const discoverySlug = matchSourcePath(url.pathname, "discovery");
   const slug = provenanceSlug ?? discoverySlug;
 
-  if (!slug) return null;
+  if (!slug) {
+    return null;
+  }
 
   const source = findSource(slug);
 
@@ -91,6 +79,7 @@ export async function evidenceRoute(
   }
 
   const provenance = await getSourceProvenance(env.DATABASE, source);
+
   return {
     status: 200,
     body: provenance as unknown as Record<string, unknown>,
