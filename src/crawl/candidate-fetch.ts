@@ -60,6 +60,8 @@ export async function fetchCrawlCandidates(
         url: link.url,
         sourceId: source.id,
         maxBytes: CANDIDATE_MAX_BYTES,
+        allowedHosts: source.crawl_hosts,
+        maxRedirects: 5,
       });
 
       await persistSourceSnapshot(database, source, snapshot);
