@@ -330,3 +330,63 @@ export async function materializeAddressGeoPoint(
     }
   });
 }
+
+
+export interface GeoPointBatchMaterializationResult {
+  candidates: number;
+  materialized: number;
+  invalid: number;
+}
+
+export async function materializePendingAddressGeoPoints(
+  database: Hyperdrive,
+  limit = 100,
+): Promise<GeoPointBatchMaterializationResult> {
+  const addressIds = await withPostgresClient(
+    database,
+    async (client) => {
+      const result = await client.query<{ address_id: string }>(
+        `
+          SELECT DISTINCT c.subject_id AS address_id
+          FROM claims c
+          JOIN observations o
+            ON o.id = c.observation_id
+          JOIN addresses a
+            ON a.id = c.subject_id
+          WHERE c.predicate = 'geo.point'
+            AND c.status = 'asserted'
+            AND o.schema_name = 'geo-point-observation'
+            AND o.schema_version = '1'
+            AND o.validation_status = 'valid'
+          ORDER BY c.subject_id
+          LIMIT $1
+        `,
+        [limit],
+      );
+
+      return result.rows.map((row) => row.address_id);
+    },
+  );
+
+  let materialized = 0;
+  let invalid = 0;
+
+  for (const addressId of addressIds) {
+    const result = await materializeAddressGeoPoint(
+      database,
+      addressId,
+    );
+
+    if (result.status === "materialized") {
+      materialized += 1;
+    } else if (result.status === "evidence_invalid") {
+      invalid += 1;
+    }
+  }
+
+  return {
+    candidates: addressIds.length,
+    materialized,
+    invalid,
+  };
+}
