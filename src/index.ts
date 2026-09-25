@@ -4,6 +4,7 @@ import { getDatabaseStatus } from "./db/status";
 import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
 import { coverageRoute } from "./routes/coverage";
+import { geoRoute } from "./routes/geo";
 import type { BrowserWorker } from "@cloudflare/playwright";
 import { explorerPage } from "./ui/explorer";
 
@@ -89,7 +90,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "coverage-inventory-vs7",
+          stage: "geo-coverage-points-vs8",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -106,7 +107,7 @@ export default {
             coverage_checker_interaction: false,
             provider_collection_enabled: false,
             address_coverage: true,
-            geo: false,
+            geo: true,
             mcp: false,
           },
         },
@@ -143,6 +144,15 @@ export default {
       return json(
         coverageResult.body as JsonValue,
         coverageResult.status,
+        headers,
+      );
+    }
+
+    const geoResult = await geoRoute(request, env);
+    if (geoResult) {
+      return json(
+        geoResult.body as JsonValue,
+        geoResult.status,
         headers,
       );
     }
@@ -186,6 +196,7 @@ export default {
             "/api/v1/providers",
             "/api/v1/coverage/address",
             "/api/v1/coverage/addresses",
+            "/api/v1/geo/coverage-points",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",
