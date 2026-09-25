@@ -104,7 +104,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "trusted-geo-proof-vs11",
+          stage: "viewport-geo-query-vs12",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -124,6 +124,7 @@ export default {
             geo: true,
             geo_evidence_materialization: true,
             trusted_geo_source: "openstreetmap-nominatim-bounded-fixture",
+            geo_viewport_query: true,
             mcp: false,
           },
         },
