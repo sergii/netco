@@ -1,0 +1,81 @@
+name: VS8 Geo Coverage Points Production Smoke
+
+on:
+  push:
+    branches:
+      - test/vs8-geo-coverage-points-production-smoke
+    paths:
+      - ".github/workflows/vs8-geo-coverage-points-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify geo projection geometry semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          all="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points?geometry=all")"
+          present="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points?geometry=present")"
+          missing="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points?geometry=missing")"
+
+          status="$(curl -sS -o /tmp/invalid.json -w '%{http_code}'             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points?geometry=banana")"
+          test "$status" = "400"
+
+          ALL="$all" PRESENT="$present" MISSING="$missing" node --input-type=module <<'NODE'
+          const all = JSON.parse(process.env.ALL);
+          const present = JSON.parse(process.env.PRESENT);
+          const missing = JSON.parse(process.env.MISSING);
+
+          if (all.type !== "FeatureCollection") {
+            throw new Error("not a FeatureCollection");
+          }
+
+          const key = "ua||київ|клавдіївська|40а||";
+          const find = (payload) =>
+            payload.features?.find(
+              (feature) => feature.properties?.normalized_key === key,
+            );
+
+          const target = find(all);
+          if (!target) throw new Error("target feature missing");
+          if (target.geometry !== null) {
+            throw new Error("coordinates were fabricated");
+          }
+          if (target.properties?.geometry_state !== "missing") {
+            throw new Error("geometry state mismatch");
+          }
+
+          if (find(present)) {
+            throw new Error("missing geometry leaked into present filter");
+          }
+          if (!find(missing)) {
+            throw new Error("target missing from missing filter");
+          }
+
+          if ((all.summary?.geometry_missing ?? 0) < 1) {
+            throw new Error("missing geometry summary mismatch");
+          }
+
+          console.log(JSON.stringify({
+            type: all.type,
+            all_count: all.count,
+            present_count: present.count,
+            missing_count: missing.count,
+            summary: all.summary,
+            target: {
+              id: target.id,
+              geometry: target.geometry,
+              geometry_state: target.properties.geometry_state,
+              freshness_state: target.properties.freshness_state,
+              provider_count: target.properties.provider_count,
+              availability_count: target.properties.availability_count,
+              technologies: target.properties.technologies,
+            },
+          }, null, 2));
+          NODE
