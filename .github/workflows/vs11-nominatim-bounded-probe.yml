@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          response="$(curl -fsS --get             -H "User-Agent: Netco/0.1 (https://github.com/sergii/netco)"             --data-urlencode "q=Київ, Клавдіївська 40А, Україна"             --data-urlencode "format=jsonv2"             --data-urlencode "addressdetails=1"             --data-urlencode "limit=3"             "https://nominatim.openstreetmap.org/search")"
+          response="$(curl -fsS --get             -H "User-Agent: Netco/0.1 (https://github.com/sergii/netco)"             --data-urlencode "q=40-А, Клавдіївська вулиця, Київ, Україна"             --data-urlencode "format=jsonv2"             --data-urlencode "addressdetails=1"             --data-urlencode "limit=3"             "https://nominatim.openstreetmap.org/search")"
 
           RESPONSE="$response" node --input-type=module <<'NODE'
           const rows = JSON.parse(process.env.RESPONSE);
