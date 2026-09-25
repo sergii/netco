@@ -1,6 +1,7 @@
 import { sourceRoute } from "./routes/sources";
 import { evidenceRoute } from "./routes/evidence";
 import { getDatabaseStatus } from "./db/status";
+import { ensureCoverageSchema } from "./db/coverage-schema-bootstrap";
 import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
 import { coverageRoute } from "./routes/coverage";
@@ -247,11 +248,14 @@ export default {
       );
 
       ctx.waitUntil(
-        probeLanetCoverageInteraction(
-          env.BROWSER,
-          env.SNAPSHOTS,
-          env.DATABASE,
-        )
+        ensureCoverageSchema(env.DATABASE)
+          .then(() =>
+            probeLanetCoverageInteraction(
+              env.BROWSER!,
+              env.SNAPSHOTS!,
+              env.DATABASE!,
+            ),
+          )
           .then(() =>
             materializeLanetCoverageOrderability(
               env.SNAPSHOTS!,
