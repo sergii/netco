@@ -1,16 +1,19 @@
-import { findSource } from "../sources/registry";
+import {
+  checkProviderAvailability,
+  findProvidersForAddress,
+} from "../application/coverage";
+import type { CapabilityFailure } from "../application/result";
+import type { AddressInput } from "../coverage/address";
 import {
   getCoverageCheckerInterface,
   getCoverageCheckerInteraction,
 } from "../coverage/store";
-import { normalizeAddress } from "../coverage/address";
 import {
-  getAddressAvailability,
-  getAllAddressAvailability,
   listAddressCoverageInventory,
   type CoverageInventoryFreshness,
 } from "../coverage/orderability";
 import { getDatabaseStatus } from "../db/status";
+import { findSource } from "../sources/registry";
 
 export interface CoverageRouteEnv {
   DATABASE?: Hyperdrive;
@@ -19,6 +22,65 @@ export interface CoverageRouteEnv {
 export interface CoverageRouteResult {
   status: number;
   body: Record<string, unknown>;
+}
+
+function structuredAddressInput(url: URL): AddressInput | null {
+  const countryCode = url.searchParams.get("country_code");
+  const city = url.searchParams.get("city");
+  const street = url.searchParams.get("street");
+  const houseNumber = url.searchParams.get("house_number");
+
+  if (!countryCode || !city || !street || !houseNumber) {
+    return null;
+  }
+
+  return {
+    country_code: countryCode,
+    region: url.searchParams.get("region"),
+    city,
+    district: url.searchParams.get("district"),
+    street,
+    house_number: houseNumber,
+    corpus: url.searchParams.get("corpus"),
+    building_letter: url.searchParams.get("building_letter"),
+    postal_code: url.searchParams.get("postal_code"),
+  };
+}
+
+function missingStructuredAddress(): CoverageRouteResult {
+  return {
+    status: 400,
+    body: {
+      error: "structured_address_required",
+      required: [
+        "country_code",
+        "city",
+        "street",
+        "house_number",
+      ],
+    },
+  };
+}
+
+function capabilityFailureResult(
+  failure: CapabilityFailure,
+): CoverageRouteResult {
+  const status =
+    failure.code === "coverage_schema_unavailable"
+      ? 503
+      : failure.code === "address_coverage_not_observed"
+        ? 404
+        : failure.code.startsWith("address_")
+          ? 400
+          : 500;
+
+  return {
+    status,
+    body: {
+      error: failure.code,
+      ...(failure.details ?? {}),
+    },
+  };
 }
 
 export async function coverageRoute(
@@ -96,163 +158,41 @@ export async function coverageRoute(
   }
 
   if (aggregateAddress) {
-    const status = await getDatabaseStatus(env.DATABASE);
-    if (!status.coverage_schema_ready) {
-      return {
-        status: 503,
-        body: {
-          error: "coverage_schema_unavailable",
-          coverage_tables: status.coverage_tables,
-        },
-      };
+    const input = structuredAddressInput(url);
+
+    if (!input) {
+      return missingStructuredAddress();
     }
 
-    const countryCode = url.searchParams.get("country_code");
-    const city = url.searchParams.get("city");
-    const street = url.searchParams.get("street");
-    const houseNumber = url.searchParams.get("house_number");
-
-    if (!countryCode || !city || !street || !houseNumber) {
-      return {
-        status: 400,
-        body: {
-          error: "structured_address_required",
-          required: [
-            "country_code",
-            "city",
-            "street",
-            "house_number",
-          ],
-        },
-      };
-    }
-
-    let normalized;
-    try {
-      normalized = normalizeAddress({
-        country_code: countryCode,
-        region: url.searchParams.get("region"),
-        city,
-        district: url.searchParams.get("district"),
-        street,
-        house_number: houseNumber,
-        corpus: url.searchParams.get("corpus"),
-        building_letter: url.searchParams.get("building_letter"),
-        postal_code: url.searchParams.get("postal_code"),
-      });
-    } catch (error) {
-      return {
-        status: 400,
-        body: {
-          error:
-            error instanceof Error
-              ? error.message
-              : "address_invalid",
-        },
-      };
-    }
-
-    const availability = await getAllAddressAvailability(
+    const result = await findProvidersForAddress(
       env.DATABASE,
-      normalized.normalized_key,
+      input,
     );
 
-    return {
-      status: 200,
-      body: {
-        query: {
-          normalized_key: normalized.normalized_key,
-          display: normalized.display,
-        },
-        ...availability,
-      },
-    };
+    return result.ok
+      ? { status: 200, body: result.value }
+      : capabilityFailureResult(result);
   }
 
   const providerSlug =
     (checkerMatch ?? interactionMatch ?? addressMatch)![1];
 
   if (addressMatch) {
-    const status = await getDatabaseStatus(env.DATABASE);
-    if (!status.coverage_schema_ready) {
-      return {
-        status: 503,
-        body: {
-          error: "coverage_schema_unavailable",
-          coverage_tables: status.coverage_tables,
-        },
-      };
+    const input = structuredAddressInput(url);
+
+    if (!input) {
+      return missingStructuredAddress();
     }
 
-    const countryCode = url.searchParams.get("country_code");
-    const city = url.searchParams.get("city");
-    const street = url.searchParams.get("street");
-    const houseNumber = url.searchParams.get("house_number");
-
-    if (!countryCode || !city || !street || !houseNumber) {
-      return {
-        status: 400,
-        body: {
-          error: "structured_address_required",
-          required: [
-            "country_code",
-            "city",
-            "street",
-            "house_number",
-          ],
-        },
-      };
-    }
-
-    let normalized;
-    try {
-      normalized = normalizeAddress({
-        country_code: countryCode,
-        region: url.searchParams.get("region"),
-        city,
-        district: url.searchParams.get("district"),
-        street,
-        house_number: houseNumber,
-        corpus: url.searchParams.get("corpus"),
-        building_letter: url.searchParams.get("building_letter"),
-        postal_code: url.searchParams.get("postal_code"),
-      });
-    } catch (error) {
-      return {
-        status: 400,
-        body: {
-          error:
-            error instanceof Error
-              ? error.message
-              : "address_invalid",
-        },
-      };
-    }
-
-    const availability = await getAddressAvailability(
+    const result = await checkProviderAvailability(
       env.DATABASE,
       providerSlug,
-      normalized.normalized_key,
+      input,
     );
 
-    if (!availability) {
-      return {
-        status: 404,
-        body: {
-          error: "address_coverage_not_observed",
-          provider: providerSlug,
-          address: {
-            normalized_key: normalized.normalized_key,
-            display: normalized.display,
-          },
-        },
-      };
-    }
-
-    return {
-      status: 200,
-      body: availability,
-    };
+    return result.ok
+      ? { status: 200, body: result.value }
+      : capabilityFailureResult(result);
   }
 
   const source = findSource(`${providerSlug}-coverage`);
@@ -315,7 +255,7 @@ export async function coverageRoute(
   return {
     status: 200,
     body: {
-      provider: (checkerMatch ?? addressMatch)![1],
+      provider: checkerMatch![1],
       source: {
         id: source.id,
         slug: source.slug,
