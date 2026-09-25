@@ -1,0 +1,26 @@
+name: Projection VS4 Dump
+
+on:
+  push:
+    branches:
+      - test/projection-vs4-dump
+    paths:
+      - ".github/workflows/projection-vs4-dump.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read production projection state
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== evidence/status ==="
+          curl -sS -i https://netco.sergii-ponomarov.workers.dev/api/v1/evidence/status
+          echo
+          echo "=== providers/lanet ==="
+          curl -sS -i https://netco.sergii-ponomarov.workers.dev/api/v1/providers/lanet
