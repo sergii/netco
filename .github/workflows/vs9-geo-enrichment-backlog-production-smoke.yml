@@ -1,0 +1,60 @@
+name: VS9 Geo Enrichment Backlog Production Smoke
+
+on:
+  push:
+    branches:
+      - test/vs9-geo-enrichment-backlog-production-smoke
+    paths:
+      - ".github/workflows/vs9-geo-enrichment-backlog-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify geo enrichment backlog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          backlog="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/enrichment-backlog")"
+
+          BACKLOG="$backlog" node --input-type=module <<'NODE'
+          const backlog = JSON.parse(process.env.BACKLOG);
+          const key = "ua||київ|клавдіївська|40а||";
+
+          if (backlog.count !== 1) {
+            throw new Error("unexpected backlog count");
+          }
+
+          const target = backlog.items?.find(
+            (item) => item.normalized_key === key,
+          );
+
+          if (!target) throw new Error("fixture missing from backlog");
+          if (target.priority !== 1) throw new Error("priority mismatch");
+          if (target.reason !== "geometry_missing") {
+            throw new Error("reason mismatch");
+          }
+          if (target.freshness_state !== "fresh") {
+            throw new Error("freshness mismatch");
+          }
+          if (target.provider_count !== 1) {
+            throw new Error("provider count mismatch");
+          }
+          if (target.availability_count !== 2) {
+            throw new Error("availability count mismatch");
+          }
+
+          const technologies = new Set(target.technologies ?? []);
+          if (!technologies.has("gig")) throw new Error("GIG missing");
+          if (!technologies.has("xgpon")) throw new Error("XGPON missing");
+
+          console.log(JSON.stringify({
+            count: backlog.count,
+            target,
+          }, null, 2));
+          NODE
