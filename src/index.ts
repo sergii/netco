@@ -5,6 +5,7 @@ import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
 import { coverageRoute } from "./routes/coverage";
 import { geoRoute } from "./routes/geo";
+import { materializePendingAddressGeoPoints } from "./geo/evidence";
 import type { BrowserWorker } from "@cloudflare/playwright";
 import { explorerPage } from "./ui/explorer";
 
@@ -90,7 +91,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "geo-enrichment-backlog-vs9",
+          stage: "geo-evidence-materialization-vs10",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -108,6 +109,7 @@ export default {
             provider_collection_enabled: false,
             address_coverage: true,
             geo: true,
+            geo_evidence_materialization: true,
             mcp: false,
           },
         },
@@ -232,5 +234,19 @@ export default {
 
     ctx.waitUntil(collectScheduledSources(env.SNAPSHOTS, env.DATABASE));
 
+    ctx.waitUntil(
+      materializePendingAddressGeoPoints(env.DATABASE)
+        .then((result) => {
+          console.log("geo_point_materialization", result);
+        })
+        .catch((error) => {
+          console.error("geo_point_materialization_failed", {
+            error:
+              error instanceof Error
+                ? error.message
+                : "unknown_error",
+          });
+        }),
+    );
   },
 } satisfies ExportedHandler<Env>;
