@@ -4,7 +4,7 @@ export interface SourceDefinition {
   provider_id: string;
   slug: string;
   provider_slug: string;
-  kind: "official_website";
+  kind: "official_website" | "address_checker";
   name: string;
   canonical_url: string;
   provider_candidate_name: string | null;
@@ -44,6 +44,21 @@ export const SOURCES: readonly SourceDefinition[] = [
     collection_enabled: true,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
     crawl_page_budget: 2,
+  },
+  {
+    id: "027a5f15-9feb-45c7-84a3-6c32d8f066bc",
+    subject_id: "820ee63f-3b2e-4b34-b1d5-3cc7bceab64d",
+    provider_id: "4bf8f950-5943-4f43-a820-457de9d4beef",
+    slug: "lanet-coverage",
+    provider_slug: "lanet",
+    kind: "address_checker",
+    name: "Lanet official coverage checker",
+    canonical_url: "https://www.lanet.ua/map/",
+    provider_candidate_name: "Мережа Ланет",
+    identity_markers: ["lanet", "Мережа Ланет", "Ланет"],
+    collection_enabled: false,
+    crawl_hosts: ["lanet.ua", "www.lanet.ua"],
+    crawl_page_budget: 0,
   },
   {
     id: "0d3a76b0-57d8-4b8e-b743-7d87b79f8c89",
