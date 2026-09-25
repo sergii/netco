@@ -329,3 +329,37 @@ Acceptance must also prove that an ambiguous checker result emits no automatic c
 - multi-provider address fan-out;
 - human review UI;
 - source-specific freshness policies.
+
+## Retry semantics after partial interaction evidence
+
+Production acceptance on 2026-09-25 exposed an important operational boundary.
+
+A failed or partial browser interaction must not inherit the normal 24-hour success cooldown.
+
+The interaction adapter therefore applies the 24-hour cooldown only when the latest interaction observation is:
+
+```text
+validation_status = valid
+```
+
+For:
+
+```text
+partial
+invalid
+```
+
+the scheduler may retry on the next collection opportunity.
+
+This matters because an adapter fix, provider UI recovery, or transient Browser Run failure must be able to produce new evidence without waiting for stale partial evidence to expire.
+
+The invariant is:
+
+```text
+valid evidence   -> freshness/cooldown may suppress redundant work
+partial evidence -> retry allowed
+invalid evidence -> retry allowed
+```
+
+During production acceptance, the cron may temporarily be accelerated to exercise this retry path. After acceptance, Netco returns to the normal daily schedule.
+
