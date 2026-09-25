@@ -460,6 +460,7 @@ export async function extractDomainEvidence(
         ? []
         : [{ code: "address_checker_marker_not_found" }],
       payload: {
+        schema_version: "coverage-entrypoint-observation.v1",
         source_slug: source.slug,
         url: snapshot.final_url,
         page_title: pageTitle,
