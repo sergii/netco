@@ -110,6 +110,8 @@ export default {
             schema_ready: false,
             required_tables: 0,
             content_length_column: false,
+            projection_schema_ready: false,
+            projection_tables: 0,
           };
 
       const status = {
