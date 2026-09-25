@@ -1,73 +1,102 @@
 import type { UrlDiscoveryObservation } from "./discovery";
-import { buildPagePurposeObservation } from "./page-purpose";
-import { captureHttpSnapshot } from "../evidence/snapshot";
+import { observePagePurpose } from "./page-purpose";
+import { captureHttpSnapshot, type SnapshotRecord } from "../evidence/snapshot";
 import {
-  getLatestSnapshotForUrl,
+  getLatestCandidateFetch,
+  persistCrawlCandidateSnapshot,
   persistPagePurposeObservation,
-  persistSourceSnapshot,
 } from "../evidence/postgres-store";
 import type { SourceDefinition } from "../sources/registry";
 
 const CANDIDATE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const CANDIDATE_MAX_BYTES = 1024 * 1024;
 
-export interface CandidateFetchResult {
-  attempted: number;
-  collected: number;
-  skipped_cooldown: number;
-  failed: number;
-  snapshots: string[];
+export interface CrawlCandidateResult {
+  url: string;
+  classification: string;
+  status: "fetched" | "cooldown" | "failed";
+  snapshot_id: string | null;
+  observation_id: string | null;
+  http_status: number | null;
+  error: string | null;
 }
 
 function stillCoolingDown(fetchedAt: string): boolean {
   const ageMs = Date.now() - new Date(fetchedAt).getTime();
-  return Number.isFinite(ageMs) && ageMs >= 0 && ageMs < CANDIDATE_COOLDOWN_MS;
+  return (
+    Number.isFinite(ageMs) &&
+    ageMs >= 0 &&
+    ageMs < CANDIDATE_COOLDOWN_MS
+  );
 }
 
 export async function fetchCrawlCandidates(
   bucket: R2Bucket,
   database: Hyperdrive,
   source: SourceDefinition,
-  discoveredFromSnapshotId: string,
+  parentSnapshot: SnapshotRecord,
   discovery: UrlDiscoveryObservation,
-): Promise<CandidateFetchResult> {
+): Promise<CrawlCandidateResult[]> {
+  if (!source.crawl_enabled || source.crawl_page_budget <= 0) {
+    return [];
+  }
+
   const candidates = discovery.payload.links
     .filter((link) => link.crawl_candidate)
+    .sort((a, b) => {
+      if (a.relevance_score !== b.relevance_score) {
+        return b.relevance_score - a.relevance_score;
+      }
+      return a.url.localeCompare(b.url);
+    })
     .slice(0, source.crawl_page_budget);
 
-  const result: CandidateFetchResult = {
-    attempted: candidates.length,
-    collected: 0,
-    skipped_cooldown: 0,
-    failed: 0,
-    snapshots: [],
-  };
+  const results: CrawlCandidateResult[] = [];
 
-  for (const link of candidates) {
+  for (const candidate of candidates) {
     try {
-      const latest = await getLatestSnapshotForUrl(
+      const latest = await getLatestCandidateFetch(
         database,
         source.id,
-        link.url,
+        candidate.url,
       );
 
       if (latest && stillCoolingDown(latest.fetched_at)) {
-        result.skipped_cooldown += 1;
+        results.push({
+          url: candidate.url,
+          classification: candidate.classification,
+          status: "cooldown",
+          snapshot_id: null,
+          observation_id: null,
+          http_status: null,
+          error: null,
+        });
         continue;
       }
 
       const snapshot = await captureHttpSnapshot(bucket, {
-        url: link.url,
+        url: candidate.url,
         sourceId: source.id,
         maxBytes: CANDIDATE_MAX_BYTES,
+        allowedHosts: source.crawl_hosts,
+        maxRedirects: 5,
       });
 
-      await persistSourceSnapshot(database, source, snapshot);
-
-      const observation = buildPagePurposeObservation(
+      await persistCrawlCandidateSnapshot(
+        database,
         source,
-        discoveredFromSnapshotId,
-        link,
+        snapshot,
+        {
+          parent_snapshot_id: parentSnapshot.id,
+          discovery_observation_id: discovery.id,
+          candidate,
+        },
+      );
+
+      const observation = await observePagePurpose(
+        bucket,
+        source,
+        candidate,
         snapshot,
       );
 
@@ -77,17 +106,27 @@ export async function fetchCrawlCandidates(
         observation,
       );
 
-      result.collected += 1;
-      result.snapshots.push(snapshot.id);
+      results.push({
+        url: candidate.url,
+        classification: candidate.classification,
+        status: "fetched",
+        snapshot_id: snapshot.id,
+        observation_id: observation.id,
+        http_status: snapshot.http_status,
+        error: null,
+      });
     } catch (error) {
-      result.failed += 1;
-      console.error("crawl_candidate_fetch_failed", {
-        source: source.slug,
-        url: link.url,
+      results.push({
+        url: candidate.url,
+        classification: candidate.classification,
+        status: "failed",
+        snapshot_id: null,
+        observation_id: null,
+        http_status: null,
         error: error instanceof Error ? error.message : "unknown_error",
       });
     }
   }
 
-  return result;
+  return results;
 }
