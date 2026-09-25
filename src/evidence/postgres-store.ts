@@ -88,10 +88,18 @@ export async function getLatestSourceSnapshot(
   });
 }
 
+export interface SnapshotPersistenceMetadata {
+  capture_kind?: "source_root" | "crawl_candidate";
+  parent_snapshot_id?: string;
+  expected_classification?: string;
+  relevance_score?: number;
+}
+
 export async function persistSourceSnapshot(
   database: Hyperdrive,
   source: SourceDefinition,
   snapshot: SnapshotRecord,
+  metadata: SnapshotPersistenceMetadata = {},
 ): Promise<void> {
   if (!snapshot.source_id) {
     throw new Error("snapshot_source_id_required");
@@ -176,6 +184,7 @@ export async function persistSourceSnapshot(
           JSON.stringify({
             requested_url: snapshot.requested_url,
             schema_version: snapshot.schema_version,
+            ...metadata,
           }),
         ],
       );
