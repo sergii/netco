@@ -118,7 +118,19 @@ jobs:
                 .first();
               if (await houseButton.count()) {
                 await houseButton.click({ force: true });
-                await page.waitForTimeout(800);
+                await page.waitForTimeout(500);
+              }
+
+              const houseCombobox = page
+                .getByRole("combobox", { name: /будинок/i })
+                .first();
+              if (await houseCombobox.count()) {
+                await houseCombobox.fill("40А");
+                await page.waitForTimeout(1_200);
+                const optionTexts = await page
+                  .getByRole("option")
+                  .allTextContents();
+                console.log("HOUSE_OPTIONS_AFTER_FILL", JSON.stringify(optionTexts));
               }
 
               let houseOption = page
