@@ -1,5 +1,8 @@
 import { findSource } from "../sources/registry";
 import { getCoverageCheckerInterface } from "../coverage/store";
+import { normalizeAddress } from "../coverage/address";
+import { getAddressAvailability } from "../coverage/orderability";
+import { getDatabaseStatus } from "../db/status";
 
 export interface CoverageRouteEnv {
   DATABASE?: Hyperdrive;
@@ -17,11 +20,14 @@ export async function coverageRoute(
   if (request.method !== "GET") return null;
 
   const url = new URL(request.url);
-  const match = url.pathname.match(
+  const checkerMatch = url.pathname.match(
     /^\/api\/v1\/coverage\/([a-z0-9-]+)\/checker-interface$/,
   );
+  const addressMatch = url.pathname.match(
+    /^\/api\/v1\/coverage\/([a-z0-9-]+)\/address$/,
+  );
 
-  if (!match) return null;
+  if (!checkerMatch && !addressMatch) return null;
 
   if (!env.DATABASE) {
     return {
@@ -30,13 +36,98 @@ export async function coverageRoute(
     };
   }
 
-  const source = findSource(`${match[1]}-coverage`);
+  const providerSlug = (checkerMatch ?? addressMatch)![1];
+
+  if (addressMatch) {
+    const status = await getDatabaseStatus(env.DATABASE);
+    if (!status.coverage_schema_ready) {
+      return {
+        status: 503,
+        body: {
+          error: "coverage_schema_unavailable",
+          coverage_tables: status.coverage_tables,
+        },
+      };
+    }
+
+    const countryCode = url.searchParams.get("country_code");
+    const city = url.searchParams.get("city");
+    const street = url.searchParams.get("street");
+    const houseNumber = url.searchParams.get("house_number");
+
+    if (!countryCode || !city || !street || !houseNumber) {
+      return {
+        status: 400,
+        body: {
+          error: "structured_address_required",
+          required: [
+            "country_code",
+            "city",
+            "street",
+            "house_number",
+          ],
+        },
+      };
+    }
+
+    let normalized;
+    try {
+      normalized = normalizeAddress({
+        country_code: countryCode,
+        region: url.searchParams.get("region"),
+        city,
+        district: url.searchParams.get("district"),
+        street,
+        house_number: houseNumber,
+        corpus: url.searchParams.get("corpus"),
+        building_letter: url.searchParams.get("building_letter"),
+        postal_code: url.searchParams.get("postal_code"),
+      });
+    } catch (error) {
+      return {
+        status: 400,
+        body: {
+          error:
+            error instanceof Error
+              ? error.message
+              : "address_invalid",
+        },
+      };
+    }
+
+    const availability = await getAddressAvailability(
+      env.DATABASE,
+      providerSlug,
+      normalized.normalized_key,
+    );
+
+    if (!availability) {
+      return {
+        status: 404,
+        body: {
+          error: "address_coverage_not_observed",
+          provider: providerSlug,
+          address: {
+            normalized_key: normalized.normalized_key,
+            display: normalized.display,
+          },
+        },
+      };
+    }
+
+    return {
+      status: 200,
+      body: availability,
+    };
+  }
+
+  const source = findSource(`${providerSlug}-coverage`);
   if (!source || source.kind !== "address_checker") {
     return {
       status: 404,
       body: {
         error: "coverage_checker_not_registered",
-        provider: match[1],
+        provider: providerSlug,
       },
     };
   }
@@ -51,7 +142,7 @@ export async function coverageRoute(
       status: 404,
       body: {
         error: "coverage_checker_probe_not_found",
-        provider: match[1],
+        provider: providerSlug,
       },
     };
   }
@@ -59,7 +150,7 @@ export async function coverageRoute(
   return {
     status: 200,
     body: {
-      provider: match[1],
+      provider: (checkerMatch ?? addressMatch)![1],
       source: {
         id: source.id,
         slug: source.slug,

@@ -122,6 +122,34 @@ case "${projection_tables}" in
     ;;
 esac
 
+echo "Checking Coverage / Orderability VS5 schema state..."
+coverage_tables="$(
+  psql -Atq -v ON_ERROR_STOP=1 -c "
+    SELECT count(*)
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'addresses',
+        'address_aliases',
+        'provider_address_availability'
+      );
+  "
+)"
+
+case "${coverage_tables}" in
+  0)
+    echo "Applying migrations/0004_coverage_addresses.sql..."
+    psql -v ON_ERROR_STOP=1 -f migrations/0004_coverage_addresses.sql
+    ;;
+  3)
+    echo "Coverage / Orderability VS5 migration is already applied."
+    ;;
+  *)
+    echo "Refusing to migrate a partial Coverage / Orderability VS5 schema: ${coverage_tables}/3 tables exist." >&2
+    exit 1
+    ;;
+esac
+
 echo "Verifying production schema..."
 verification="$(
   psql -Atq -v ON_ERROR_STOP=1 -c "
@@ -180,4 +208,22 @@ if [ "${projection_verification}" != "10" ]; then
   exit 1
 fi
 
-echo "Evidence Spine + Resolution / Projection VS4 production migration complete."
+coverage_verification="$(
+  psql -Atq -v ON_ERROR_STOP=1 -c "
+    SELECT count(*)
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = 'public'
+      AND tablename IN (
+        'addresses',
+        'address_aliases',
+        'provider_address_availability'
+      );
+  "
+)"
+
+if [ "${coverage_verification}" != "3" ]; then
+  echo "Coverage schema verification failed: expected 3, got ${coverage_verification}" >&2
+  exit 1
+fi
+
+echo "Evidence Spine + Projection VS4 + Coverage VS5 production migration complete."

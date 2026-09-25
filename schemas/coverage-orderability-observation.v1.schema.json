@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/coverage-orderability-observation.v1.schema.json",
+  "title": "Netco Coverage Orderability Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_slug",
+    "provider_slug",
+    "checker_url",
+    "address_id",
+    "address",
+    "result",
+    "service_kind",
+    "technologies",
+    "evidence_markers",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "coverage-orderability-observation.v1"
+    },
+    "source_slug": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_slug": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checker_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "address_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "address": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "country_code",
+        "city",
+        "street",
+        "house_number",
+        "corpus",
+        "building_letter",
+        "normalized_key",
+        "display"
+      ],
+      "properties": {
+        "country_code": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "city": { "type": "string", "minLength": 1 },
+        "street": { "type": "string", "minLength": 1 },
+        "house_number": { "type": "string", "minLength": 1 },
+        "corpus": { "type": ["string", "null"] },
+        "building_letter": { "type": ["string", "null"] },
+        "normalized_key": { "type": "string", "minLength": 1 },
+        "display": { "type": "string", "minLength": 1 }
+      }
+    },
+    "result": {
+      "type": "string",
+      "enum": ["orderable", "unavailable", "needs_verification"]
+    },
+    "service_kind": {
+      "const": "internet"
+    },
+    "technologies": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "evidence_markers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}
