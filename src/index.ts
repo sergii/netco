@@ -15,6 +15,7 @@ import {
   materializeLanetCoverageOrderability,
 } from "./coverage/orderability-materializer";
 import type { BrowserWorker } from "@cloudflare/playwright";
+import { explorerPage } from "./ui/explorer";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
@@ -76,6 +77,10 @@ export default {
     const id = requestId(request);
     const headers = { "x-request-id": id };
     const evidence = evidenceStatus(env);
+
+    if (request.method === "GET" && url.pathname === "/") {
+      return explorerPage();
+    }
 
     if (request.method === "GET" && url.pathname === "/healthz") {
       return json(
@@ -176,10 +181,10 @@ export default {
       }
     }
 
-    if (request.method === "GET" && url.pathname === "/") {
+    if (request.method === "GET" && url.pathname === "/api/v1") {
       return json(
         {
-          name: "Netco",
+          name: "Netco API",
           description:
             "Evidence-backed internet provider and geospatial intelligence API",
           endpoints: [
@@ -187,14 +192,7 @@ export default {
             "/api/v1/meta",
             "/api/v1/evidence/status",
             "/api/v1/sources",
-            "/api/v1/sources/teremki",
-            "/api/v1/sources/teremki/provenance",
-            "/api/v1/sources/teremki-billing/discovery",
-            "/api/v1/sources/lanet/discovery",
-            "/api/v1/sources/lanet/crawl",
-            "/api/v1/sources/lanet/extractions",
             "/api/v1/providers",
-            "/api/v1/providers/lanet",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",
