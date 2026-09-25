@@ -32,24 +32,37 @@ jobs:
                 const rows = body.extractions;
                 if (!Array.isArray(rows)) process.exit(1);
 
-                const plan = rows.find(row =>
+                const v2 = rows.filter(row =>
+                  row.extractor === "deterministic-domain-html" &&
+                  row.extractor_version === "2"
+                );
+
+                const plan = v2.find(row =>
                   row.schema_name === "plan-observation" &&
                   row.validation_status === "valid"
                 );
-                const technology = rows.find(row =>
+                const technology = v2.find(row =>
                   row.schema_name === "technology-observation" &&
                   row.validation_status === "valid"
                 );
-                const coverage = rows.find(row =>
+                const coverage = v2.find(row =>
                   row.schema_name === "coverage-entrypoint-observation" &&
                   row.validation_status === "valid"
                 );
 
-                const predicates = rows.flatMap(row =>
+                const predicates = v2.flatMap(row =>
                   Array.isArray(row.claims)
                     ? row.claims.map(claim => claim.predicate)
                     : []
                 );
+
+                const v2TechnologyLabels = v2
+                  .filter(row => row.schema_name === "technology-observation")
+                  .flatMap(row =>
+                    Array.isArray(row?.payload?.technologies)
+                      ? row.payload.technologies.map(t => t.observed_label)
+                      : []
+                  );
 
                 const valid =
                   plan?.validation_status === "valid" &&
@@ -59,6 +72,8 @@ jobs:
                   Array.isArray(technology?.payload?.technologies) &&
                   technology.payload.technologies.length > 0 &&
                   coverage?.validation_status === "valid" &&
+                  coverage?.payload?.geographic_hint === "Київ" &&
+                  !v2TechnologyLabels.includes("XGPON") &&
                   predicates.includes("plan.catalog_entry") &&
                   predicates.includes("service.technology") &&
                   predicates.includes("coverage.checker_entrypoint");
