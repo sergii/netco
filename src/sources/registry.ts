@@ -8,6 +8,8 @@ export interface SourceDefinition {
   provider_candidate_name: string | null;
   identity_markers: readonly string[];
   collection_enabled: boolean;
+  crawl_enabled: boolean;
+  crawl_page_budget: number;
   crawl_hosts: readonly string[];
 }
 
@@ -22,6 +24,8 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: false,
+    crawl_enabled: false,
+    crawl_page_budget: 0,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
   },
   {
@@ -34,12 +38,34 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: true,
+    crawl_enabled: false,
+    crawl_page_budget: 0,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
+  },
+  {
+    id: "41fcf95a-df8b-4aa4-812f-e12064577891",
+    subject_id: "caa2dfcc-2e1f-4d18-a760-975cc2f7a6f1",
+    slug: "lanet",
+    kind: "official_website",
+    name: "Мережа Ланет official website",
+    canonical_url: "https://www.lanet.ua/",
+    provider_candidate_name: "Мережа Ланет",
+    identity_markers: ["lanet", "Ланет", "Мережа Ланет"],
+    collection_enabled: true,
+    crawl_enabled: true,
+    crawl_page_budget: 3,
+    crawl_hosts: ["lanet.ua", "www.lanet.ua"],
   },
 ];
 
 export function collectionEnabledSources(): readonly SourceDefinition[] {
   return SOURCES.filter((source) => source.collection_enabled);
+}
+
+export function crawlEnabledSources(): readonly SourceDefinition[] {
+  return SOURCES.filter(
+    (source) => source.collection_enabled && source.crawl_enabled,
+  );
 }
 
 export function findSource(slug: string): SourceDefinition | undefined {
