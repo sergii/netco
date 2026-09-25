@@ -104,7 +104,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "geo-evidence-materialization-vs10",
+          stage: "trusted-geo-proof-vs11",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -123,6 +123,7 @@ export default {
             address_coverage: true,
             geo: true,
             geo_evidence_materialization: true,
+            trusted_geo_source: "openstreetmap-nominatim-bounded-fixture",
             mcp: false,
           },
         },
@@ -217,6 +218,7 @@ export default {
             "/api/v1/coverage/addresses",
             "/api/v1/geo/coverage-points",
             "/api/v1/geo/enrichment-backlog",
+            "/api/v1/geo/addresses/:address_id/provenance",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",
