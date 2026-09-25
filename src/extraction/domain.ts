@@ -3,6 +3,7 @@ import type { SourceDefinition } from "../sources/registry";
 import {
   decodeSnapshotBody,
   extractHtmlTitle,
+  htmlToPrimaryText,
   htmlToText,
   normalizedEvidenceText,
 } from "./html";
@@ -28,7 +29,7 @@ interface ObservationBase {
   id: string;
   schema_version: "1";
   extractor: "deterministic-domain-html";
-  extractor_version: "1";
+  extractor_version: "2";
   normalizer_version: "1";
   extracted_at: string;
   validation_status: "valid" | "partial" | "invalid";
@@ -89,7 +90,7 @@ function baseObservation(): Omit<ObservationBase, "validation_status" | "validat
     id: crypto.randomUUID(),
     schema_version: "1",
     extractor: "deterministic-domain-html",
-    extractor_version: "1",
+    extractor_version: "2",
     normalizer_version: "1",
     extracted_at: new Date().toISOString(),
   };
@@ -129,9 +130,13 @@ function extractPlans(text: string): PlanObservation["payload"]["plans"] {
 
     if (!name) continue;
 
-    const speedMatch = segment.match(
-      /\b(\d{2,5})\s*(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)\b/i,
-    );
+    const speedMatch =
+      segment.match(
+        /\b(\d{2,5})\b(?=[\s\S]{0,90}?(?:швидкість[\s\S]{0,30}?)?(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)\b)/i,
+      ) ??
+      segment.match(
+        /\b(\d{2,5})\s*(?:мбіт\s*\/\s*с|мбіт\/с|mbit\s*\/\s*s|mbps)\b/i,
+      );
     const priceMatch = segment.match(
       /\b(\d{1,5}(?:[.,]\d{1,2})?)\s*грн\b/i,
     );
@@ -299,6 +304,7 @@ export async function extractDomainEvidence(
   );
   const pageTitle = extractHtmlTitle(html);
   const text = htmlToText(html);
+  const primaryText = htmlToPrimaryText(html);
 
   const successful =
     snapshot.http_status >= 200 && snapshot.http_status < 400;
@@ -387,7 +393,7 @@ export async function extractDomainEvidence(
       );
     }
 
-    const technologies = extractTechnologyLabels(text);
+    const technologies = extractTechnologyLabels(primaryText);
     const observation: TechnologyObservation = {
       ...baseObservation(),
       schema_name: "technology-observation",
@@ -450,7 +456,7 @@ export async function extractDomainEvidence(
     const checkerDetected =
       marker !== null ||
       /\/map\/?$/i.test(new URL(snapshot.final_url).pathname);
-    const geographicHint = /\bкиїв\b/i.test(normalized) ? "Київ" : null;
+    const geographicHint = normalized.includes("київ") ? "Київ" : null;
 
     const observation: CoverageEntrypointObservation = {
       ...baseObservation(),
