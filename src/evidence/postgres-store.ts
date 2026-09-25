@@ -411,6 +411,7 @@ export async function getSourceProvenance(
           payload
         FROM observations
         WHERE source_snapshot_id = $1
+          AND schema_name = 'provider-identity-observation'
         ORDER BY extracted_at DESC
         LIMIT 1
       `,
