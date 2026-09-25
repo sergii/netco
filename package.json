@@ -10,7 +10,8 @@
     "cf-types": "wrangler types",
     "neon:status": "neon status",
     "neon:plan": "neon config plan",
-    "neon:deploy": "neon deploy"
+    "neon:deploy": "neon deploy",
+    "cf:hyperdrive:provision": "bash scripts/provision-hyperdrive.sh"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260925.1",
