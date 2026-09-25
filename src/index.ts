@@ -49,6 +49,18 @@ function requestId(request: Request): string {
   return request.headers.get("cf-ray") ?? crypto.randomUUID();
 }
 
+function shouldRunScheduledCollection(
+  event: ScheduledController,
+): boolean {
+  if (event.cron !== "* * * * *") return true;
+
+  const scheduledAt = new Date(event.scheduledTime);
+  return (
+    scheduledAt.getUTCHours() === 3 &&
+    scheduledAt.getUTCMinutes() === 17
+  );
+}
+
 function evidenceStatus(env: Env) {
   const snapshots = Boolean(env.SNAPSHOTS);
   const database = Boolean(env.DATABASE);
@@ -215,10 +227,12 @@ export default {
     );
   },
   async scheduled(
-    _event: ScheduledController,
+    event: ScheduledController,
     env: Env,
     ctx: ExecutionContext,
   ): Promise<void> {
+    if (!shouldRunScheduledCollection(event)) return;
+
     if (!env.SNAPSHOTS || !env.DATABASE) {
       console.error("scheduled_collection_bindings_unavailable", {
         snapshots: Boolean(env.SNAPSHOTS),
