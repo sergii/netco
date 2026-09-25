@@ -1,4 +1,5 @@
 import { sourceRoute } from "./routes/sources";
+import { evidenceRoute } from "./routes/evidence";
 import { getDatabaseStatus } from "./db/status";
 
 export interface Env {
@@ -112,6 +113,15 @@ export default {
       return json(status, status.ready ? 200 : 503, headers);
     }
 
+    const evidenceResult = await evidenceRoute(request, env);
+    if (evidenceResult) {
+      return json(
+        evidenceResult.body as JsonValue,
+        evidenceResult.status,
+        { ...headers, ...evidenceResult.headers },
+      );
+    }
+
     if (request.method === "GET") {
       const result = sourceRoute(url.pathname);
       if (result) {
@@ -131,6 +141,7 @@ export default {
             "/api/v1/evidence/status",
             "/api/v1/sources",
             "/api/v1/sources/teremki",
+            "/api/v1/sources/teremki/provenance",
           ],
         },
         200,
