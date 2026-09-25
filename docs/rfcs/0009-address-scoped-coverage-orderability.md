@@ -363,3 +363,42 @@ invalid evidence -> retry allowed
 
 During production acceptance, the cron may temporarily be accelerated to exercise this retry path. After acceptance, Netco returns to the normal daily schedule.
 
+
+
+## Lanet result classification contract
+
+A live browser probe of the public acceptance fixture on 2026-09-25 established the address-result state that appears only after both semantic controls have been completed.
+
+For `Київ, Клавдіївська, 40А`, the address-specific result contains the ordered evidence region between the selected house and the map attribution, including:
+
+```text
+б. 40А
+Послуга Інтернет
+Доступна у всьому будинку
+GIG (мідна вита пара)
+XGPON (оптичне волокно)
+Замовити підключення
+```
+
+The provider-wide map legend also contains both positive and negative phrases regardless of the selected address. Therefore the classifier must not treat page-wide occurrences such as `Доступне підключення` or `Підключення недоступне` as address orderability evidence.
+
+The initial deterministic classifier is intentionally conservative:
+
+```text
+selected house
+  + address-local "Послуга Інтернет"
+  + address-local "Доступна у всьому будинку"
+  + address-local "Замовити підключення"
+    -> orderable
+
+anything else
+    -> needs_verification
+```
+
+Explicit technologies are preserved from the same address-local result region. The first proven fixture exposes `GIG` and `XGPON`.
+
+No automatic `unavailable` claim is emitted until a separate production fixture proves a deterministic address-local unavailable state. This preserves the invariant that absence of positive evidence is not negative evidence.
+
+Orderability interpretation runs as a separate materialization step after the immutable interaction snapshot is persisted. The materializer reads that exact R2 snapshot, creates or reuses the canonical Address subject, persists `coverage-orderability-observation.v1`, emits `coverage.orderable` only for a claimable deterministic result, and rebuilds `provider_address_availability`.
+
+This separation keeps raw browser evidence append-only and retryable independently from interpretation.

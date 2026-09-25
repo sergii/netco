@@ -11,6 +11,9 @@ import {
 import {
   probeLanetCoverageInteraction,
 } from "./coverage/interaction-probe";
+import {
+  materializeLanetCoverageOrderability,
+} from "./coverage/orderability-materializer";
 import type { BrowserWorker } from "@cloudflare/playwright";
 
 export interface Env {
@@ -248,15 +251,22 @@ export default {
           env.BROWSER,
           env.SNAPSHOTS,
           env.DATABASE,
-        ).catch((error) => {
-          console.error("coverage_checker_interaction_probe_failed", {
-            source: "lanet-coverage",
-            error:
-              error instanceof Error
-                ? error.message
-                : "unknown_error",
-          });
-        }),
+        )
+          .then(() =>
+            materializeLanetCoverageOrderability(
+              env.SNAPSHOTS!,
+              env.DATABASE!,
+            ),
+          )
+          .catch((error) => {
+            console.error("coverage_checker_interaction_pipeline_failed", {
+              source: "lanet-coverage",
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "unknown_error",
+            });
+          }),
       );
     }
   },
