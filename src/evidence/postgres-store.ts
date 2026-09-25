@@ -1,6 +1,8 @@
 import type { SnapshotRecord } from "./snapshot";
 import type { IdentityObservation } from "./identity";
 import type { UrlDiscoveryObservation } from "../crawl/discovery";
+import type { ClassifiedLink } from "../crawl/classifier";
+import type { PagePurposeObservation } from "../crawl/page-purpose";
 import type { SourceDefinition } from "../sources/registry";
 import { withPostgresClient } from "../db/postgres";
 
@@ -66,6 +68,7 @@ export async function getLatestSourceSnapshot(
         SELECT id, fetched_at
         FROM source_snapshots
         WHERE source_id = $1
+          AND COALESCE(fetch_metadata->>'capture_kind', 'source_root') = 'source_root'
         ORDER BY fetched_at DESC
         LIMIT 1
       `,
@@ -170,6 +173,7 @@ export async function persistSourceSnapshot(
           JSON.stringify({
             requested_url: snapshot.requested_url,
             schema_version: snapshot.schema_version,
+            capture_kind: "source_root",
           }),
         ],
       );
@@ -355,6 +359,7 @@ export async function getSourceProvenance(
           body_ref
         FROM source_snapshots
         WHERE source_id = $1
+          AND COALESCE(fetch_metadata->>'capture_kind', 'source_root') = 'source_root'
         ORDER BY fetched_at DESC
         LIMIT 1
       `,
@@ -508,6 +513,7 @@ export async function getLatestSourceSnapshotRecord(
           fetch_metadata
         FROM source_snapshots
         WHERE source_id = $1
+          AND COALESCE(fetch_metadata->>'capture_kind', 'source_root') = 'source_root'
         ORDER BY fetched_at DESC
         LIMIT 1
       `,
@@ -641,5 +647,212 @@ export async function getLatestUrlDiscoveryObservation(
       validation_errors: row.validation_errors,
       payload: row.payload,
     };
+  });
+}
+
+
+export interface CandidateFetchState {
+  fetched_at: string;
+}
+
+export interface PersistCandidateInput {
+  parent_snapshot_id: string;
+  discovery_observation_id: string;
+  candidate: ClassifiedLink;
+}
+
+export async function getLatestCandidateFetch(
+  database: Hyperdrive,
+  sourceId: string,
+  requestedUrl: string,
+): Promise<CandidateFetchState | null> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{ fetched_at: Date | string }>(
+      `
+        SELECT fetched_at
+        FROM source_snapshots
+        WHERE source_id = $1
+          AND fetch_metadata->>'capture_kind' = 'crawl_candidate'
+          AND fetch_metadata->>'requested_url' = $2
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      `,
+      [sourceId, requestedUrl],
+    );
+
+    const row = result.rows[0];
+    return row ? { fetched_at: iso(row.fetched_at) } : null;
+  });
+}
+
+export async function persistCrawlCandidateSnapshot(
+  database: Hyperdrive,
+  source: SourceDefinition,
+  snapshot: SnapshotRecord,
+  input: PersistCandidateInput,
+): Promise<void> {
+  if (snapshot.source_id !== source.id) {
+    throw new Error("snapshot_source_mismatch");
+  }
+
+  await withPostgresClient(database, async (client) => {
+    await client.query(
+      `
+        INSERT INTO source_snapshots (
+          id,
+          source_id,
+          url,
+          fetched_at,
+          http_status,
+          response_headers,
+          content_hash,
+          content_type,
+          content_length,
+          body_ref,
+          fetch_metadata
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4::timestamptz,
+          $5,
+          $6::jsonb,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11::jsonb
+        )
+      `,
+      [
+        snapshot.id,
+        source.id,
+        snapshot.final_url,
+        snapshot.fetched_at,
+        snapshot.http_status,
+        JSON.stringify(snapshot.response_headers),
+        snapshot.sha256,
+        snapshot.content_type,
+        snapshot.content_length,
+        snapshot.body_ref,
+        JSON.stringify({
+          capture_kind: "crawl_candidate",
+          requested_url: snapshot.requested_url,
+          schema_version: snapshot.schema_version,
+          parent_snapshot_id: input.parent_snapshot_id,
+          discovery_observation_id: input.discovery_observation_id,
+          expected_classification: input.candidate.classification,
+          relevance_score: input.candidate.relevance_score,
+        }),
+      ],
+    );
+  });
+}
+
+export async function persistPagePurposeObservation(
+  database: Hyperdrive,
+  snapshot: SnapshotRecord,
+  observation: PagePurposeObservation,
+): Promise<void> {
+  await withPostgresClient(database, async (client) => {
+    await client.query(
+      `
+        INSERT INTO observations (
+          id,
+          source_snapshot_id,
+          schema_name,
+          schema_version,
+          extractor,
+          extractor_version,
+          normalizer_version,
+          extracted_at,
+          payload,
+          validation_status,
+          validation_errors
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8::timestamptz,
+          $9::jsonb,
+          $10,
+          $11::jsonb
+        )
+      `,
+      [
+        observation.id,
+        snapshot.id,
+        observation.schema_name,
+        observation.schema_version,
+        observation.extractor,
+        observation.extractor_version,
+        observation.normalizer_version,
+        observation.extracted_at,
+        JSON.stringify(observation.payload),
+        observation.validation_status,
+        JSON.stringify(observation.validation_errors),
+      ],
+    );
+  });
+}
+
+export async function getLatestCrawlPages(
+  database: Hyperdrive,
+  sourceId: string,
+): Promise<Array<Record<string, unknown>>> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{
+      snapshot_id: string;
+      requested_url: string;
+      final_url: string;
+      fetched_at: Date | string;
+      http_status: number;
+      content_hash: string;
+      content_length: string | number | null;
+      observation_id: string | null;
+      validation_status: string | null;
+      payload: unknown;
+    }>(
+      `
+        SELECT
+          s.id AS snapshot_id,
+          s.fetch_metadata->>'requested_url' AS requested_url,
+          s.url AS final_url,
+          s.fetched_at,
+          s.http_status,
+          s.content_hash,
+          s.content_length,
+          o.id AS observation_id,
+          o.validation_status,
+          o.payload
+        FROM source_snapshots s
+        LEFT JOIN LATERAL (
+          SELECT id, validation_status, payload
+          FROM observations
+          WHERE source_snapshot_id = s.id
+            AND schema_name = 'page-purpose-observation'
+          ORDER BY extracted_at DESC
+          LIMIT 1
+        ) o ON true
+        WHERE s.source_id = $1
+          AND s.fetch_metadata->>'capture_kind' = 'crawl_candidate'
+        ORDER BY s.fetched_at DESC
+        LIMIT 20
+      `,
+      [sourceId],
+    );
+
+    return result.rows.map((row) => ({
+      ...row,
+      fetched_at: iso(row.fetched_at),
+      content_length:
+        row.content_length === null ? null : Number(row.content_length),
+    }));
   });
 }
