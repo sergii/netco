@@ -31,7 +31,7 @@ jobs:
         run: npm run typecheck
 
       - name: Validate provisioning scripts
-        run: bash -n scripts/provision-hyperdrive.sh scripts/rotate-hyperdrive-credentials.sh
+        run: bash -n scripts/provision-hyperdrive.sh scripts/rotate-hyperdrive-credentials.sh scripts/migrate-production.sh
 
       - name: Verify Worker bundle
         run: npx wrangler deploy --dry-run --config wrangler.jsonc
