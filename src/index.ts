@@ -90,7 +90,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "geo-coverage-points-vs8",
+          stage: "geo-enrichment-backlog-vs9",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -197,6 +197,7 @@ export default {
             "/api/v1/coverage/address",
             "/api/v1/coverage/addresses",
             "/api/v1/geo/coverage-points",
+            "/api/v1/geo/enrichment-backlog",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",
