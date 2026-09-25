@@ -33,6 +33,31 @@ export async function ensureCoverageSchema(
 
       const tableCount = Number(result.rows[0]?.count ?? 0);
 
+      const context = await client.query<{
+        current_user: string;
+        current_database: string;
+        current_schema: string | null;
+        neon_branch_id: string | null;
+        neon_project_id: string | null;
+        neon_timeline_id: string | null;
+      }>(
+        `
+          SELECT
+            current_user,
+            current_database() AS current_database,
+            current_schema() AS current_schema,
+            current_setting('neon.branch_id', true) AS neon_branch_id,
+            current_setting('neon.project_id', true) AS neon_project_id,
+            current_setting('neon.timeline_id', true) AS neon_timeline_id
+        `,
+      );
+
+      console.log("coverage_schema_context", {
+        ...context.rows[0],
+        table_count: tableCount,
+        expected_table_count: COVERAGE_TABLES.length,
+      });
+
       if (tableCount === COVERAGE_TABLES.length) {
         await client.query("COMMIT");
         return "already_ready";
