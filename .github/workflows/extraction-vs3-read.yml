@@ -56,7 +56,7 @@ jobs:
                     : []
                 );
 
-                const v4TechnologyLabels = v3
+                const v4TechnologyLabels = v4
                   .filter(row => row.schema_name === "technology-observation")
                   .flatMap(row =>
                     Array.isArray(row?.payload?.technologies)
