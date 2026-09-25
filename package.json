@@ -12,7 +12,8 @@
     "neon:plan": "neon config plan",
     "neon:deploy": "neon deploy",
     "cf:hyperdrive:provision": "bash scripts/provision-hyperdrive.sh",
-    "cf:hyperdrive:rotate": "bash scripts/rotate-hyperdrive-credentials.sh"
+    "cf:hyperdrive:rotate": "bash scripts/rotate-hyperdrive-credentials.sh",
+    "db:migrate:production": "bash scripts/migrate-production.sh"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260925.1",
