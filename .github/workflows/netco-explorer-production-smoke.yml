@@ -1,0 +1,53 @@
+name: Netco Explorer Production Smoke
+
+on:
+  push:
+    branches:
+      - test/netco-explorer-production-smoke
+    paths:
+      - ".github/workflows/netco-explorer-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify production Explorer and address projection
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          root_headers="$(mktemp)"
+          root_body="$(mktemp)"
+          curl -fsS -D "$root_headers"             "https://netco.sergii-ponomarov.workers.dev/"             -o "$root_body"
+
+          grep -qi '^content-type: text/html' "$root_headers"
+          grep -q '<title>Netco Explorer</title>' "$root_body"
+          grep -q 'What do we actually know?' "$root_body"
+          grep -q 'no live provider probing' "$root_body"
+
+          coverage="$(curl -fsS --get             --data-urlencode "country_code=UA"             --data-urlencode "city=Київ"             --data-urlencode "street=Клавдіївська"             --data-urlencode "house_number=40А"             "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/lanet/address")"
+
+          COVERAGE="$coverage" node --input-type=module <<'NODE'
+          const body = JSON.parse(process.env.COVERAGE);
+          const rows = Array.isArray(body.availability) ? body.availability : [];
+          const states = new Map(rows.map((row) => [row.technology, row.availability_state]));
+
+          if (body.provider !== "lanet") throw new Error("provider mismatch");
+          if (states.get("gig") !== "orderable") throw new Error("GIG projection missing");
+          if (states.get("xgpon") !== "orderable") throw new Error("XGPON projection missing");
+
+          console.log(JSON.stringify({
+            title: "Netco Explorer",
+            provider: body.provider,
+            address: body.address,
+            availability: rows.map((row) => ({
+              technology: row.technology,
+              state: row.availability_state,
+              claim: row.supporting_claim_id,
+            })),
+          }, null, 2));
+          NODE
