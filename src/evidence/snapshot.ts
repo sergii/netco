@@ -201,3 +201,74 @@ export async function captureHttpSnapshot(
 
   return record;
 }
+
+
+export interface CaptureArtifactSnapshotInput {
+  sourceId: string;
+  requestedUrl: string;
+  finalUrl?: string;
+  body: string | ArrayBuffer;
+  contentType?: string;
+  httpStatus?: number;
+  responseHeaders?: Record<string, string>;
+}
+
+export async function captureArtifactSnapshot(
+  bucket: R2Bucket,
+  input: CaptureArtifactSnapshotInput,
+): Promise<SnapshotRecord> {
+  const requestedUrl = normalizeEvidenceUrl(input.requestedUrl);
+  const finalUrl = normalizeEvidenceUrl(
+    input.finalUrl ?? requestedUrl.toString(),
+  );
+  const bytes =
+    typeof input.body === "string"
+      ? new TextEncoder().encode(input.body).buffer
+      : input.body;
+  const hash = await sha256Hex(bytes);
+  const snapshotId = crypto.randomUUID();
+  const bodyRef = `blobs/sha256/${hash.slice(0, 2)}/${hash}`;
+  const contentType =
+    input.contentType ?? "application/json; charset=utf-8";
+
+  const existing = await bucket.head(bodyRef);
+  if (!existing) {
+    await bucket.put(bodyRef, bytes, {
+      httpMetadata: { contentType },
+      customMetadata: {
+        sha256: hash,
+      },
+    });
+  }
+
+  const record: SnapshotRecord = {
+    schema_version: "source-snapshot.v1",
+    id: snapshotId,
+    source_id: input.sourceId,
+    requested_url: requestedUrl.toString(),
+    final_url: finalUrl.toString(),
+    fetched_at: new Date().toISOString(),
+    http_status: input.httpStatus ?? 200,
+    response_headers: input.responseHeaders ?? {},
+    content_type: contentType,
+    content_length: bytes.byteLength,
+    sha256: hash,
+    body_ref: bodyRef,
+  };
+
+  await bucket.put(
+    `snapshots/${snapshotId}.json`,
+    JSON.stringify(record),
+    {
+      httpMetadata: {
+        contentType: "application/json; charset=utf-8",
+      },
+      customMetadata: {
+        snapshot_id: snapshotId,
+        sha256: hash,
+      },
+    },
+  );
+
+  return record;
+}
