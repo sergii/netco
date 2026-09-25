@@ -1,0 +1,74 @@
+name: Projection VS4 Read Acceptance
+
+on:
+  push:
+    branches:
+      - test/projection-vs4-read
+    paths:
+      - ".github/workflows/projection-vs4-read.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      BASE_URL: https://netco.sergii-ponomarov.workers.dev
+
+    steps:
+      - name: Wait for projection schema and Lanet provider
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 84); do
+            status="$(curl -fsS "$BASE_URL/api/v1/evidence/status" 2>/dev/null || true)"
+            provider="$(curl -fsS "$BASE_URL/api/v1/providers/lanet" 2>/dev/null || true)"
+
+            if STATUS_BODY="$status" PROVIDER_BODY="$provider" node -e '
+              try {
+                const status = JSON.parse(process.env.STATUS_BODY || "{}");
+                const body = JSON.parse(process.env.PROVIDER_BODY || "{}");
+                const provider = body.provider;
+                const plans = body.current_plans;
+                const technologies = body.current_technologies;
+                const resolution = body.resolution;
+
+                const valid =
+                  status?.database?.projection_schema_ready === true &&
+                  status?.database?.projection_tables === 10 &&
+                  provider?.slug === "lanet" &&
+                  provider?.id === "4bf8f950-5943-4f43-a820-457de9d4beef" &&
+                  Array.isArray(plans) &&
+                  plans.length > 0 &&
+                  plans.some(plan =>
+                    plan?.canonical_name === "PON.T" &&
+                    Number(plan?.terms?.download_mbps) === 5000
+                  ) &&
+                  Array.isArray(technologies) &&
+                  technologies.some(technology =>
+                    technology?.technology === "xpon"
+                  ) &&
+                  resolution?.decision === "MATCH" &&
+                  Number(resolution?.confidence) === 1;
+
+                if (valid) {
+                  console.log(JSON.stringify({ status, provider: body }));
+                  process.exit(0);
+                }
+              } catch {}
+              process.exit(1);
+            '; then
+              exit 0
+            fi
+
+            echo "Waiting for Projection VS4 production evidence (attempt $attempt/84)..."
+            sleep 5
+          done
+
+          echo "Projection VS4 acceptance timed out." >&2
+          echo "Status: $status" >&2
+          echo "Provider: $provider" >&2
+          exit 1
