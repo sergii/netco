@@ -31,6 +31,25 @@ jobs:
             viewport: { width: 1440, height: 1200 },
           });
 
+          const networkPaths = [];
+          page.on("request", (request) => {
+            const type = request.resourceType();
+            if (!["fetch", "xhr"].includes(type)) return;
+
+            const target = new URL(request.url());
+            if (
+              /kyivstar|coverage|address|internet|connect/i.test(
+                target.hostname + target.pathname,
+              )
+            ) {
+              networkPaths.push({
+                type,
+                method: request.method(),
+                target: target.origin + target.pathname,
+              });
+            }
+          });
+
           try {
             await page.goto("https://kyivstar.ua/home-internet", {
               waitUntil: "domcontentloaded",
@@ -172,6 +191,7 @@ jobs:
 
             const bodyText = (await page.locator("body").innerText()).replace(/\\r/g, "");
             console.log("BODY_AFTER_TRIGGER", bodyText.slice(0, 15000));
+            console.log("NETWORK_PATHS", JSON.stringify(networkPaths.slice(-150)));
             console.log("FINAL_URL", page.url());
           } finally {
             await browser.close();
