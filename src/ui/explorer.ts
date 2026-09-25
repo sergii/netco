@@ -365,53 +365,71 @@ export function explorerPage(): Response {
         house_number: house,
       });
 
-      const rows = await Promise.all(
-        state.providers.map(async (provider) => {
-          const slug = provider.slug;
-          const response = await getJson("/api/v1/coverage/" + encodeURIComponent(slug) + "/address?" + params.toString());
-          return { provider, response };
-        }),
+      const response = await getJson(
+        "/api/v1/coverage/address?" + params.toString(),
       );
 
-      const known = rows.filter((row) => row.response.ok);
-      const unknown = rows.filter((row) => !row.response.ok);
-
-      if (!known.length) {
-        results.innerHTML = '<div class="provider-result"><div class="provider-title">No persisted coverage evidence</div><div class="muted">Це означає "Netco ще не знає", а не "підключення недоступне".</div></div>';
+      if (!response.ok) {
+        results.innerHTML =
+          '<div class="provider-result"><div class="provider-title">Coverage read failed</div><div class="muted">' +
+          escapeHtml(response.body?.error || "unknown_error") +
+          '</div></div>';
         renderEvidence([], null);
         return;
       }
 
-      results.innerHTML = known.map(({ provider, response }) => {
-        const availability = response.body?.availability ?? [];
+      const providers = Array.isArray(response.body?.providers)
+        ? response.body.providers
+        : [];
+
+      if (!providers.length) {
+        results.innerHTML =
+          '<div class="provider-result"><div class="provider-title">No persisted coverage evidence</div><div class="muted">Це означає "Netco ще не знає", а не "підключення недоступне".</div></div>';
+        renderEvidence([], null);
+        return;
+      }
+
+      const address = response.body?.address;
+      results.innerHTML = providers.map((provider) => {
+        const availability = Array.isArray(provider.availability)
+          ? provider.availability
+          : [];
+
         return '<div class="provider-result"><div class="row"><div><div class="provider-title">' +
-          escapeHtml(provider.display_name || provider.slug) +
-          '</div><div class="muted">' + escapeHtml(response.body?.address?.city || city) + ', ' +
-          escapeHtml(response.body?.address?.street || street) + ' ' +
-          escapeHtml(response.body?.address?.house_number || house) +
+          escapeHtml(provider.display_name || provider.slug || provider.provider_id) +
+          '</div><div class="muted">' +
+          escapeHtml(address?.city || city) + ', ' +
+          escapeHtml(address?.street || street) + ' ' +
+          escapeHtml(address?.house_number || house) +
           '</div></div><span class="pill good">persisted evidence</span></div>' +
           '<div class="techs">' +
           availability.map((item) =>
-            '<span class="tech"><strong>' + escapeHtml(String(item.technology || "unknown").toUpperCase()) +
+            '<span class="tech"><strong>' +
+            escapeHtml(String(item.technology || "unknown").toUpperCase()) +
             '</strong> · ' + escapeHtml(item.availability_state || "unknown") +
-            '<br><span class="muted">' + escapeHtml(formatTime(item.observed_at)) + '</span></span>'
+            '<br><span class="muted">' +
+            escapeHtml(formatTime(item.observed_at)) +
+            '</span></span>'
           ).join("") +
           '</div><div class="item-meta" style="margin-top:12px">claim ' +
           escapeHtml(shortId(availability[0]?.supporting_claim_id)) +
-          ' · fresh until ' + escapeHtml(formatTime(availability[0]?.fresh_until)) +
+          ' · fresh until ' +
+          escapeHtml(formatTime(availability[0]?.fresh_until)) +
           '</div></div>';
-      }).join("") +
-      (unknown.length ? '<div class="muted" style="padding:5px 2px">No persisted address evidence for: ' +
-        unknown.map((row) => escapeHtml(row.provider.display_name || row.provider.slug)).join(", ") +
-        '. This is not an unavailable result.</div>' : '');
+      }).join("");
 
-      const firstKnown = known[0];
+      const firstKnown = providers[0];
       let interaction = null;
-      if (firstKnown?.provider?.slug) {
-        const interactionResponse = await getJson("/api/v1/coverage/" + encodeURIComponent(firstKnown.provider.slug) + "/checker-interaction");
+      if (firstKnown?.slug) {
+        const interactionResponse = await getJson(
+          "/api/v1/coverage/" +
+            encodeURIComponent(firstKnown.slug) +
+            "/checker-interaction",
+        );
         if (interactionResponse.ok) interaction = interactionResponse.body;
       }
-      renderEvidence(firstKnown.response.body?.availability ?? [], interaction);
+
+      renderEvidence(firstKnown?.availability ?? [], interaction);
     }
 
     document.getElementById("lookup").addEventListener("click", lookupAddress);
