@@ -1,0 +1,22 @@
+name: Coverage VS5 Probe Dump
+
+on:
+  push:
+    branches:
+      - test/coverage-vs5-probe-dump
+    paths:
+      - ".github/workflows/coverage-vs5-probe-dump.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read checker interface
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/lanet/checker-interface
