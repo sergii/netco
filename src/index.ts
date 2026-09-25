@@ -79,12 +79,13 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "evidence-spine-vs1",
+          stage: "crawler-discovery-vs1",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
             database: evidence.bindings.database,
             sources: true,
+            url_discovery: true,
             providers: false,
             geo: false,
             mcp: false,
@@ -143,6 +144,7 @@ export default {
             "/api/v1/sources",
             "/api/v1/sources/teremki",
             "/api/v1/sources/teremki/provenance",
+            "/api/v1/sources/teremki-billing/discovery",
           ],
         },
         200,

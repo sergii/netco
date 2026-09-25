@@ -1,4 +1,7 @@
-import { getSourceProvenance } from "../evidence/postgres-store";
+import {
+  getLatestUrlDiscoveryObservation,
+  getSourceProvenance,
+} from "../evidence/postgres-store";
 import { findSource } from "../sources/registry";
 
 export interface EvidenceRouteEnv {
@@ -11,10 +14,15 @@ export interface AsyncRouteResult {
   headers?: Record<string, string>;
 }
 
-function matchSourceProvenancePath(pathname: string): string | null {
-  return pathname.match(
-    /^\/api\/v1\/sources\/([a-z0-9-]+)\/provenance$/,
-  )?.[1] ?? null;
+function matchSourcePath(
+  pathname: string,
+  suffix: "provenance" | "discovery",
+): string | null {
+  const pattern = new RegExp(
+    `^/api/v1/sources/([a-z0-9-]+)/${suffix}$`,
+  );
+
+  return pathname.match(pattern)?.[1] ?? null;
 }
 
 export async function evidenceRoute(
@@ -26,7 +34,9 @@ export async function evidenceRoute(
   }
 
   const url = new URL(request.url);
-  const slug = matchSourceProvenancePath(url.pathname);
+  const provenanceSlug = matchSourcePath(url.pathname, "provenance");
+  const discoverySlug = matchSourcePath(url.pathname, "discovery");
+  const slug = provenanceSlug ?? discoverySlug;
 
   if (!slug) {
     return null;
@@ -48,7 +58,28 @@ export async function evidenceRoute(
     };
   }
 
+  if (discoverySlug) {
+    const discovery = await getLatestUrlDiscoveryObservation(
+      env.DATABASE,
+      source.id,
+    );
+
+    return {
+      status: 200,
+      body: {
+        source: {
+          id: source.id,
+          slug: source.slug,
+          name: source.name,
+          canonical_url: source.canonical_url,
+        },
+        discovery,
+      },
+    };
+  }
+
   const provenance = await getSourceProvenance(env.DATABASE, source);
+
   return {
     status: 200,
     body: provenance as unknown as Record<string, unknown>,

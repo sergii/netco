@@ -8,6 +8,7 @@ export interface SourceDefinition {
   provider_candidate_name: string | null;
   identity_markers: readonly string[];
   collection_enabled: boolean;
+  crawl_hosts: readonly string[];
 }
 
 export const SOURCES: readonly SourceDefinition[] = [
@@ -21,6 +22,7 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: false,
+    crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
   },
   {
     id: "eebfc808-4e2d-4bc8-af56-676b413a53ab",
@@ -32,6 +34,7 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: true,
+    crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
   },
 ];
 

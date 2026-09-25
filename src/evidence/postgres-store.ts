@@ -1,5 +1,6 @@
 import type { SnapshotRecord } from "./snapshot";
 import type { IdentityObservation } from "./identity";
+import type { UrlDiscoveryObservation } from "../crawl/discovery";
 import type { SourceDefinition } from "../sources/registry";
 import { withPostgresClient } from "../db/postgres";
 
@@ -466,6 +467,179 @@ export async function getSourceProvenance(
             ? null
             : Number(claim.extraction_confidence),
       })),
+    };
+  });
+}
+
+
+export async function getLatestSourceSnapshotRecord(
+  database: Hyperdrive,
+  sourceId: string,
+): Promise<SnapshotRecord | null> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{
+      id: string;
+      source_id: string;
+      url: string;
+      fetched_at: Date | string;
+      http_status: number;
+      response_headers: Record<string, string>;
+      content_hash: string;
+      content_type: string | null;
+      content_length: string | number | null;
+      body_ref: string;
+      fetch_metadata: {
+        requested_url?: string;
+        schema_version?: string;
+      } | null;
+    }>(
+      `
+        SELECT
+          id,
+          source_id,
+          url,
+          fetched_at,
+          http_status,
+          response_headers,
+          content_hash,
+          content_type,
+          content_length,
+          body_ref,
+          fetch_metadata
+        FROM source_snapshots
+        WHERE source_id = $1
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      `,
+      [sourceId],
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      schema_version: "source-snapshot.v1",
+      id: row.id,
+      source_id: row.source_id,
+      requested_url: row.fetch_metadata?.requested_url ?? row.url,
+      final_url: row.url,
+      fetched_at: iso(row.fetched_at),
+      http_status: row.http_status,
+      response_headers: row.response_headers ?? {},
+      content_type: row.content_type,
+      content_length:
+        row.content_length === null ? 0 : Number(row.content_length),
+      sha256: row.content_hash,
+      body_ref: row.body_ref,
+    };
+  });
+}
+
+export async function persistUrlDiscoveryObservation(
+  database: Hyperdrive,
+  snapshot: SnapshotRecord,
+  observation: UrlDiscoveryObservation,
+): Promise<boolean> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{ id: string }>(
+      `
+        INSERT INTO observations (
+          id,
+          source_snapshot_id,
+          schema_name,
+          schema_version,
+          extractor,
+          extractor_version,
+          normalizer_version,
+          extracted_at,
+          payload,
+          validation_status,
+          validation_errors
+        )
+        SELECT
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8::timestamptz,
+          $9::jsonb,
+          $10,
+          $11::jsonb
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM observations
+          WHERE source_snapshot_id = $2
+            AND schema_name = $3
+            AND schema_version = $4
+            AND extractor = $5
+            AND extractor_version = $6
+        )
+        RETURNING id
+      `,
+      [
+        observation.id,
+        snapshot.id,
+        observation.schema_name,
+        observation.schema_version,
+        observation.extractor,
+        observation.extractor_version,
+        observation.normalizer_version,
+        observation.extracted_at,
+        JSON.stringify(observation.payload),
+        observation.validation_status,
+        JSON.stringify(observation.validation_errors),
+      ],
+    );
+
+    return result.rowCount === 1;
+  });
+}
+
+export async function getLatestUrlDiscoveryObservation(
+  database: Hyperdrive,
+  sourceId: string,
+): Promise<Record<string, unknown> | null> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{
+      id: string;
+      source_snapshot_id: string;
+      extracted_at: Date | string;
+      validation_status: string;
+      validation_errors: unknown;
+      payload: unknown;
+    }>(
+      `
+        SELECT
+          o.id,
+          o.source_snapshot_id,
+          o.extracted_at,
+          o.validation_status,
+          o.validation_errors,
+          o.payload
+        FROM observations o
+        JOIN source_snapshots s
+          ON s.id = o.source_snapshot_id
+        WHERE s.source_id = $1
+          AND o.schema_name = 'url-discovery-observation'
+        ORDER BY o.extracted_at DESC
+        LIMIT 1
+      `,
+      [sourceId],
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      source_snapshot_id: row.source_snapshot_id,
+      extracted_at: iso(row.extracted_at),
+      validation_status: row.validation_status,
+      validation_errors: row.validation_errors,
+      payload: row.payload,
     };
   });
 }
