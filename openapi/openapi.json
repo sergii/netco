@@ -531,6 +531,38 @@
           }
         }
       }
+    },
+    "/api/v1/geo/addresses/{address_id}/provenance": {
+      "get": {
+        "tags": [
+          "Geo",
+          "Evidence"
+        ],
+        "operationId": "getAddressGeoProvenance",
+        "summary": "Get trusted coordinate provenance for an address",
+        "parameters": [
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
