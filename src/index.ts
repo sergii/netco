@@ -89,7 +89,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "multi-provider-address-vs6",
+          stage: "coverage-inventory-vs7",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -185,6 +185,7 @@ export default {
             "/api/v1/sources",
             "/api/v1/providers",
             "/api/v1/coverage/address",
+            "/api/v1/coverage/addresses",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",

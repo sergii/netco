@@ -7,6 +7,8 @@ import { normalizeAddress } from "../coverage/address";
 import {
   getAddressAvailability,
   getAllAddressAvailability,
+  listAddressCoverageInventory,
+  type CoverageInventoryFreshness,
 } from "../coverage/orderability";
 import { getDatabaseStatus } from "../db/status";
 
@@ -26,6 +28,7 @@ export async function coverageRoute(
   if (request.method !== "GET") return null;
 
   const url = new URL(request.url);
+  const inventoryPath = url.pathname === "/api/v1/coverage/addresses";
   const aggregateAddress = url.pathname === "/api/v1/coverage/address";
   const checkerMatch = url.pathname.match(
     /^\/api\/v1\/coverage\/([a-z0-9-]+)\/checker-interface$/,
@@ -37,12 +40,58 @@ export async function coverageRoute(
     /^\/api\/v1\/coverage\/([a-z0-9-]+)\/address$/,
   );
 
-  if (!aggregateAddress && !checkerMatch && !interactionMatch && !addressMatch) return null;
+  if (
+    !inventoryPath &&
+    !aggregateAddress &&
+    !checkerMatch &&
+    !interactionMatch &&
+    !addressMatch
+  ) {
+    return null;
+  }
 
   if (!env.DATABASE) {
     return {
       status: 503,
       body: { error: "database_binding_unavailable" },
+    };
+  }
+
+  if (inventoryPath) {
+    const status = await getDatabaseStatus(env.DATABASE);
+    if (!status.coverage_schema_ready) {
+      return {
+        status: 503,
+        body: {
+          error: "coverage_schema_unavailable",
+          coverage_tables: status.coverage_tables,
+        },
+      };
+    }
+
+    const requestedFreshness =
+      url.searchParams.get("freshness") ?? "all";
+
+    if (
+      requestedFreshness !== "all" &&
+      requestedFreshness !== "fresh" &&
+      requestedFreshness !== "stale"
+    ) {
+      return {
+        status: 400,
+        body: {
+          error: "freshness_invalid",
+          allowed: ["all", "fresh", "stale"],
+        },
+      };
+    }
+
+    return {
+      status: 200,
+      body: await listAddressCoverageInventory(
+        env.DATABASE,
+        requestedFreshness as CoverageInventoryFreshness,
+      ),
     };
   }
 
