@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/plan-observation.v1.schema.json",
+  "title": "Netco Plan Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_slug", "url", "plans"],
+  "properties": {
+    "schema_version": { "const": "plan-observation.v1" },
+    "source_slug": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "format": "uri" },
+    "page_title": { "type": ["string", "null"] },
+    "plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "download_mbps",
+          "technology",
+          "monthly_price",
+          "promo_price",
+          "promo_duration_months",
+          "price_after_promo",
+          "evidence_marker"
+        ],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "download_mbps": { "type": ["integer", "null"], "minimum": 0 },
+          "technology": { "type": ["string", "null"] },
+          "monthly_price": { "$ref": "#/$defs/nullableMoney" },
+          "promo_price": { "$ref": "#/$defs/nullableMoney" },
+          "promo_duration_months": { "type": ["integer", "null"], "minimum": 0 },
+          "price_after_promo": { "$ref": "#/$defs/nullableMoney" },
+          "evidence_marker": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{2}$" },
+        "currency": { "const": "UAH" }
+      }
+    },
+    "nullableMoney": {
+      "oneOf": [
+        { "$ref": "#/$defs/money" },
+        { "type": "null" }
+      ]
+    }
+  }
+}
