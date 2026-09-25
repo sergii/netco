@@ -2,17 +2,13 @@ import {
   checkProviderAvailability,
   findProvidersForAddress,
 } from "../application/coverage";
+import { listCoverageInventory } from "../application/coverage-inventory";
 import type { CapabilityFailure } from "../application/result";
 import type { AddressInput } from "../coverage/address";
 import {
   getCoverageCheckerInterface,
   getCoverageCheckerInteraction,
 } from "../coverage/store";
-import {
-  listAddressCoverageInventory,
-  type CoverageInventoryFreshness,
-} from "../coverage/orderability";
-import { getDatabaseStatus } from "../db/status";
 import { findSource } from "../sources/registry";
 
 export interface CoverageRouteEnv {
@@ -70,7 +66,8 @@ function capabilityFailureResult(
       ? 503
       : failure.code === "address_coverage_not_observed"
         ? 404
-        : failure.code.startsWith("address_")
+        : failure.code.startsWith("address_") ||
+            failure.code === "freshness_invalid"
           ? 400
           : 500;
 
@@ -120,41 +117,14 @@ export async function coverageRoute(
   }
 
   if (inventoryPath) {
-    const status = await getDatabaseStatus(env.DATABASE);
-    if (!status.coverage_schema_ready) {
-      return {
-        status: 503,
-        body: {
-          error: "coverage_schema_unavailable",
-          coverage_tables: status.coverage_tables,
-        },
-      };
-    }
+    const result = await listCoverageInventory(
+      env.DATABASE,
+      url.searchParams.get("freshness"),
+    );
 
-    const requestedFreshness =
-      url.searchParams.get("freshness") ?? "all";
-
-    if (
-      requestedFreshness !== "all" &&
-      requestedFreshness !== "fresh" &&
-      requestedFreshness !== "stale"
-    ) {
-      return {
-        status: 400,
-        body: {
-          error: "freshness_invalid",
-          allowed: ["all", "fresh", "stale"],
-        },
-      };
-    }
-
-    return {
-      status: 200,
-      body: await listAddressCoverageInventory(
-        env.DATABASE,
-        requestedFreshness as CoverageInventoryFreshness,
-      ),
-    };
+    return result.ok
+      ? { status: 200, body: result.value }
+      : capabilityFailureResult(result);
   }
 
   if (aggregateAddress) {
