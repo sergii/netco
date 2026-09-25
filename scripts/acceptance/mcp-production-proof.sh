@@ -13,26 +13,17 @@ require_command() {
   }
 }
 
-for command_name in curl jq openssl npx; do
+for command_name in curl jq; do
   require_command "$command_name"
 done
 
-test -n "${CLOUDFLARE_API_TOKEN:-}" || {
-  echo "CLOUDFLARE_API_TOKEN is required." >&2
-  exit 1
-}
-test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || {
-  echo "CLOUDFLARE_ACCOUNT_ID is required." >&2
+test -n "${NETCO_MCP_TOKEN:-}" || {
+  echo "NETCO_MCP_TOKEN is required for live MCP production proof." >&2
   exit 1
 }
 
-MCP_TOKEN="$(openssl rand -hex 32)"
+MCP_TOKEN="$NETCO_MCP_TOKEN"
 echo "::add-mask::$MCP_TOKEN"
-
-echo "==> Provision MCP_TOKEN as a Cloudflare Worker secret"
-printf '%s' "$MCP_TOKEN"   | npx wrangler secret put MCP_TOKEN --config wrangler.jsonc >/tmp/netco-mcp-secret-put.log
-
-npx wrangler secret list --config wrangler.jsonc   | jq -e '.[] | select(.name == "MCP_TOKEN" and .type == "secret_text")' >/dev/null
 
 mcp_payload() {
   local id="$1"
@@ -230,7 +221,7 @@ META_WITH_TOKEN="$(
 }
 
 echo "✓ Netco MCP1 production proof passed"
-echo "  MCP_TOKEN provisioned as Worker secret       ✓"
+echo "  out-of-band MCP_TOKEN authenticated live     ✓"
 echo "  unauthenticated MCP rejected                  ✓"
 echo "  authenticated discovery passed                ✓"
 echo "  exactly two read-only tools exposed           ✓"
