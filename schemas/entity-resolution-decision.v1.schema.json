@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/entity-resolution-decision.v1.schema.json",
+  "title": "Netco Entity Resolution Decision V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "resolution_case_id",
+    "decision",
+    "decided_by",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "entity-resolution-decision.v1"
+    },
+    "resolution_case_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "MATCH",
+        "POSSIBLE_MATCH",
+        "NO_MATCH",
+        "REVIEW"
+      ]
+    },
+    "canonical_subject_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "decided_by": {
+      "type": "string",
+      "enum": [
+        "rule",
+        "model",
+        "human",
+        "import"
+      ]
+    },
+    "resolver_version": {
+      "type": ["string", "null"]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_subject_id",
+          "signal",
+          "direction",
+          "value"
+        ],
+        "properties": {
+          "candidate_subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ]
+          },
+          "strength": {
+            "type": ["number", "null"]
+          },
+          "value": {}
+        }
+      }
+    },
+    "rationale": {
+      "type": "object"
+    }
+  }
+}
