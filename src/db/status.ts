@@ -8,6 +8,12 @@ const REQUIRED_TABLES = [
   "subjects",
 ] as const;
 
+const COVERAGE_TABLES = [
+  "addresses",
+  "address_aliases",
+  "provider_address_availability",
+] as const;
+
 const PROJECTION_TABLES = [
   "entities",
   "resolution_cases",
@@ -28,6 +34,8 @@ export interface DatabaseStatus {
   content_length_column: boolean;
   projection_schema_ready: boolean;
   projection_tables: number;
+  coverage_schema_ready: boolean;
+  coverage_tables: number;
 }
 
 export async function getDatabaseStatus(
@@ -39,6 +47,7 @@ export async function getDatabaseStatus(
         required_tables: string;
         content_length_column: boolean;
         projection_tables: string;
+        coverage_tables: string;
       }>(
         `
           SELECT
@@ -60,15 +69,22 @@ export async function getDatabaseStatus(
               FROM pg_catalog.pg_tables
               WHERE schemaname = 'public'
                 AND tablename = ANY($2::text[])
-            ) AS projection_tables
+            ) AS projection_tables,
+            (
+              SELECT count(*)::text
+              FROM pg_catalog.pg_tables
+              WHERE schemaname = 'public'
+                AND tablename = ANY($3::text[])
+            ) AS coverage_tables
         `,
-        [REQUIRED_TABLES, PROJECTION_TABLES],
+        [REQUIRED_TABLES, PROJECTION_TABLES, COVERAGE_TABLES],
       );
 
       const row = result.rows[0];
       const requiredTables = Number(row?.required_tables ?? 0);
       const contentLengthColumn = Boolean(row?.content_length_column);
       const projectionTables = Number(row?.projection_tables ?? 0);
+      const coverageTables = Number(row?.coverage_tables ?? 0);
 
       return {
         reachable: true,
@@ -79,6 +95,9 @@ export async function getDatabaseStatus(
         projection_schema_ready:
           projectionTables === PROJECTION_TABLES.length,
         projection_tables: projectionTables,
+        coverage_schema_ready:
+          coverageTables === COVERAGE_TABLES.length,
+        coverage_tables: coverageTables,
       };
     });
   } catch {
@@ -89,6 +108,8 @@ export async function getDatabaseStatus(
       content_length_column: false,
       projection_schema_ready: false,
       projection_tables: 0,
+      coverage_schema_ready: false,
+      coverage_tables: 0,
     };
   }
 }
