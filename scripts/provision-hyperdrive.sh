@@ -6,8 +6,15 @@ BRANCH="production"
 ROLE="hyperdrive-user"
 HYPERDRIVE_NAME="netco-db"
 
+WRANGLER="./node_modules/.bin/wrangler"
+
 if ! command -v neon >/dev/null 2>&1; then
   echo "Neon CLI is not installed. Run: npm i -g neon@latest" >&2
+  exit 1
+fi
+
+if [ ! -x "${WRANGLER}" ]; then
+  echo "Local Wrangler is not installed. Run: npm install" >&2
   exit 1
 fi
 
@@ -51,17 +58,17 @@ if [ -z "${connection_string}" ]; then
 fi
 
 echo "Checking Cloudflare authentication..."
-if ! npx wrangler whoami >/dev/null 2>&1; then
+if ! "${WRANGLER}" whoami >/dev/null 2>&1; then
   echo "Wrangler is not authenticated. Opening Cloudflare login..."
-  npx wrangler login
+  "${WRANGLER}" login
 fi
 
 echo "Checking whether Hyperdrive ${HYPERDRIVE_NAME} already exists..."
-if npx wrangler hyperdrive list 2>/dev/null | grep -Fq "${HYPERDRIVE_NAME}"; then
+if "${WRANGLER}" hyperdrive list 2>/dev/null | grep -Fq "${HYPERDRIVE_NAME}"; then
   echo "Hyperdrive ${HYPERDRIVE_NAME} already exists."
 else
   echo "Creating Hyperdrive ${HYPERDRIVE_NAME}..."
-  npx wrangler hyperdrive create "${HYPERDRIVE_NAME}" \
+  "${WRANGLER}" hyperdrive create "${HYPERDRIVE_NAME}" \
     --connection-string="${connection_string}"
 fi
 
@@ -69,4 +76,4 @@ unset connection_string
 
 echo
 echo "Hyperdrive bootstrap complete."
-echo "Next: inspect the generated Hyperdrive ID and add it as DATABASE in wrangler.jsonc."
+echo "Hyperdrive binding is managed in wrangler.jsonc as DATABASE."
