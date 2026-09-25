@@ -101,6 +101,7 @@ export default {
             provider_projections: true,
             providers: true,
             coverage_checker_probe: Boolean(env.BROWSER),
+            address_coverage: true,
             geo: false,
             mcp: false,
           },
@@ -120,6 +121,8 @@ export default {
             content_length_column: false,
             projection_schema_ready: false,
             projection_tables: 0,
+            coverage_schema_ready: false,
+            coverage_tables: 0,
           };
 
       const status = {
@@ -185,6 +188,7 @@ export default {
             "/api/v1/providers",
             "/api/v1/providers/lanet",
             "/api/v1/coverage/lanet/checker-interface",
+            "/api/v1/coverage/lanet/address",
           ],
         },
         200,
