@@ -2,6 +2,7 @@ import { sourceRoute } from "./routes/sources";
 import { evidenceRoute } from "./routes/evidence";
 import { getDatabaseStatus } from "./db/status";
 import { collectScheduledSources } from "./evidence/collector";
+import { providerRoute } from "./routes/providers";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
@@ -79,7 +80,7 @@ export default {
         {
           service: "netco",
           version: "0.1.0",
-          stage: "domain-extraction-vs3",
+          stage: "projection-resolution-vs4",
           capabilities: {
             evidence: evidence.ready,
             snapshots: evidence.bindings.snapshots,
@@ -89,7 +90,9 @@ export default {
             bounded_crawl: true,
             domain_extraction: true,
             source_backed_claims: true,
-            providers: false,
+            provider_resolution: true,
+            provider_projections: true,
+            providers: true,
             geo: false,
             mcp: false,
           },
@@ -116,6 +119,15 @@ export default {
       };
 
       return json(status, status.ready ? 200 : 503, headers);
+    }
+
+    const providerResult = await providerRoute(request, env);
+    if (providerResult) {
+      return json(
+        providerResult.body as JsonValue,
+        providerResult.status,
+        headers,
+      );
     }
 
     const evidenceResult = await evidenceRoute(request, env);
@@ -151,6 +163,8 @@ export default {
             "/api/v1/sources/lanet/discovery",
             "/api/v1/sources/lanet/crawl",
             "/api/v1/sources/lanet/extractions",
+            "/api/v1/providers",
+            "/api/v1/providers/lanet",
           ],
         },
         200,
