@@ -1,0 +1,71 @@
+name: VS10 Geo Evidence Boundary Production Smoke
+
+on:
+  push:
+    branches:
+      - test/vs10-geo-evidence-boundary-production-smoke
+    paths:
+      - ".github/workflows/vs10-geo-evidence-boundary-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify geo evidence boundary is non-fabricating
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          meta="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/meta")"
+          geo="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points?geometry=all")"
+          backlog="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/enrichment-backlog")"
+
+          META="$meta" GEO="$geo" BACKLOG="$backlog" node --input-type=module <<'NODE'
+          const meta = JSON.parse(process.env.META);
+          const geo = JSON.parse(process.env.GEO);
+          const backlog = JSON.parse(process.env.BACKLOG);
+
+          if (meta.stage !== "geo-evidence-materialization-vs10") {
+            throw new Error("VS10 stage mismatch");
+          }
+          if (meta.capabilities?.geo_evidence_materialization !== true) {
+            throw new Error("geo evidence materialization capability missing");
+          }
+          if (meta.capabilities?.provider_collection_enabled !== false) {
+            throw new Error("provider collection unexpectedly enabled");
+          }
+
+          const key = "ua||київ|клавдіївська|40а||";
+          const feature = geo.features?.find(
+            (item) => item.properties?.normalized_key === key,
+          );
+          if (!feature) throw new Error("fixture missing");
+          if (feature.geometry !== null) {
+            throw new Error("coordinate materialized without evidence");
+          }
+          if (feature.properties?.geometry_state !== "missing") {
+            throw new Error("geometry state mismatch");
+          }
+
+          const queued = backlog.items?.find(
+            (item) => item.normalized_key === key,
+          );
+          if (!queued) {
+            throw new Error("missing-geometry fixture left backlog without evidence");
+          }
+
+          console.log(JSON.stringify({
+            stage: meta.stage,
+            geo_evidence_materialization:
+              meta.capabilities.geo_evidence_materialization,
+            provider_collection_enabled:
+              meta.capabilities.provider_collection_enabled,
+            geometry: feature.geometry,
+            geometry_state: feature.properties.geometry_state,
+            backlog_priority: queued.priority,
+          }, null, 2));
+          NODE
