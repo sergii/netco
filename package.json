@@ -7,13 +7,18 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "cf-types": "wrangler types"
+    "cf-types": "wrangler types",
+    "neon:status": "neon status",
+    "neon:plan": "neon config plan",
+    "neon:deploy": "neon deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260925.1",
     "typescript": "^5.9.2",
     "wrangler": "4.138.0",
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "@neon/config": "1.7.3",
+    "@neon/env": "1.4.4"
   },
   "dependencies": {
     "pg": "8.23.0"
