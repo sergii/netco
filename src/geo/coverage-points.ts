@@ -2,9 +2,17 @@ import { withPostgresClient } from "../db/postgres";
 
 export type CoverageGeometryFilter = "all" | "present" | "missing";
 
+export interface CoverageViewport {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
 export async function getCoveragePointFeatureCollection(
   database: Hyperdrive,
   geometryFilter: CoverageGeometryFilter = "all",
+  viewport: CoverageViewport | null = null,
 ): Promise<Record<string, unknown>> {
   return withPostgresClient(database, async (client) => {
     const result = await client.query<{
@@ -54,6 +62,17 @@ export async function getCoveragePointFeatureCollection(
         FROM addresses a
         JOIN provider_address_availability paa
           ON paa.address_id = a.id
+        WHERE (
+          $1::boolean = false
+          OR (
+            a.latitude IS NOT NULL
+            AND a.longitude IS NOT NULL
+            AND a.longitude >= $2
+            AND a.latitude >= $3
+            AND a.longitude <= $4
+            AND a.latitude <= $5
+          )
+        )
         GROUP BY
           a.id,
           a.country_code,
@@ -75,6 +94,13 @@ export async function getCoveragePointFeatureCollection(
           a.house_number,
           a.id
       `,
+      [
+        viewport !== null,
+        viewport?.west ?? 0,
+        viewport?.south ?? 0,
+        viewport?.east ?? 0,
+        viewport?.north ?? 0,
+      ],
     );
 
     const features = result.rows
@@ -136,6 +162,7 @@ export async function getCoveragePointFeatureCollection(
     return {
       type: "FeatureCollection",
       geometry_filter: geometryFilter,
+      viewport,
       count: features.length,
       summary: {
         geometry_present: geocodedCount,

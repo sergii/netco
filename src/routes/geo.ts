@@ -4,6 +4,7 @@ import { getAddressGeoProvenance } from "../geo/provenance";
 import {
   getCoveragePointFeatureCollection,
   type CoverageGeometryFilter,
+  type CoverageViewport,
 } from "../geo/coverage-points";
 
 export interface GeoRouteEnv {
@@ -86,6 +87,58 @@ export async function geoRoute(
   const requestedGeometry =
     url.searchParams.get("geometry") ?? "all";
 
+  const viewportNames = ["west", "south", "east", "north"] as const;
+  const viewportValues = viewportNames.map((name) =>
+    url.searchParams.get(name),
+  );
+  const suppliedViewportValues = viewportValues.filter(
+    (value) => value !== null,
+  );
+
+  let viewport: CoverageViewport | null = null;
+
+  if (suppliedViewportValues.length > 0) {
+    if (suppliedViewportValues.length !== viewportNames.length) {
+      return {
+        status: 400,
+        body: {
+          error: "viewport_incomplete",
+          required: [...viewportNames],
+        },
+      };
+    }
+
+    const [west, south, east, north] = viewportValues.map(
+      (value) => Number(value),
+    );
+
+    if (
+      !Number.isFinite(west) ||
+      !Number.isFinite(south) ||
+      !Number.isFinite(east) ||
+      !Number.isFinite(north) ||
+      west < -180 ||
+      west > 180 ||
+      east < -180 ||
+      east > 180 ||
+      south < -90 ||
+      south > 90 ||
+      north < -90 ||
+      north > 90 ||
+      west >= east ||
+      south >= north
+    ) {
+      return {
+        status: 400,
+        body: {
+          error: "viewport_invalid",
+        },
+      };
+    }
+
+    viewport = { west, south, east, north };
+  }
+
   if (
     requestedGeometry !== "all" &&
     requestedGeometry !== "present" &&
@@ -100,11 +153,22 @@ export async function geoRoute(
     };
   }
 
+  if (viewport && requestedGeometry === "missing") {
+    return {
+      status: 400,
+      body: {
+        error: "viewport_requires_geometry",
+        allowed_geometry: ["all", "present"],
+      },
+    };
+  }
+
   return {
     status: 200,
     body: await getCoveragePointFeatureCollection(
       env.DATABASE,
       requestedGeometry as CoverageGeometryFilter,
+      viewport,
     ),
   };
 }
