@@ -1,0 +1,22 @@
+name: Extraction VS3 Dump
+
+on:
+  push:
+    branches:
+      - test/extraction-vs3-dump
+    paths:
+      - ".github/workflows/extraction-vs3-dump.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read production extractions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS https://netco.sergii-ponomarov.workers.dev/api/v1/sources/lanet/extractions
