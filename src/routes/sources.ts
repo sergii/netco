@@ -1,30 +1,18 @@
-import { SOURCES, findSource, type SourceDefinition } from "../sources/registry";
+import {
+  getSource,
+  listSources,
+} from "../application/sources";
 
 export interface SourceRouteResult {
   status: number;
   body: unknown;
 }
 
-function serializeSource(source: SourceDefinition) {
-  return {
-    id: source.id,
-    slug: source.slug,
-    provider_id: source.provider_id,
-    provider_slug: source.provider_slug,
-    kind: source.kind,
-    name: source.name,
-    canonical_url: source.canonical_url,
-    provider_candidate_name: source.provider_candidate_name,
-  };
-}
-
 export function sourceRoute(pathname: string): SourceRouteResult | null {
   if (pathname === "/api/v1/sources") {
     return {
       status: 200,
-      body: {
-        sources: SOURCES.map(serializeSource),
-      },
+      body: listSources(),
     };
   }
 
@@ -33,22 +21,18 @@ export function sourceRoute(pathname: string): SourceRouteResult | null {
     return null;
   }
 
-  const source = findSource(match[1]);
+  const result = getSource(match[1]);
 
-  if (!source) {
-    return {
-      status: 404,
-      body: {
-        error: "source_not_found",
-        source: match[1],
-      },
-    };
-  }
-
-  return {
-    status: 200,
-    body: {
-      source: serializeSource(source),
-    },
-  };
+  return result.ok
+    ? {
+        status: 200,
+        body: result.value,
+      }
+    : {
+        status: 404,
+        body: {
+          error: result.code,
+          ...(result.details ?? {}),
+        },
+      };
 }
