@@ -20,6 +20,16 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
   },
+  {
+    id: "eebfc808-4e2d-4bc8-af56-676b413a53ab",
+    subject_id: "6caf6ed2-e26b-4d59-bae8-b2805e6edafe",
+    slug: "teremki-billing",
+    kind: "official_website",
+    name: "Teremki@LAN billing",
+    canonical_url: "https://stat.teremki.net.ua/login.php",
+    provider_candidate_name: "Teremki@LAN",
+    identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
+  },
 ];
 
 export function findSource(slug: string): SourceDefinition | undefined {
