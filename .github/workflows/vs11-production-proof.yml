@@ -1,0 +1,91 @@
+name: VS11 Production Proof
+
+on:
+  push:
+    branches:
+      - test/vs11-production-proof
+    paths:
+      - ".github/workflows/vs11-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Materialize frozen trusted geo evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          proof="$(curl -fsS -X POST             "https://netco.sergii-ponomarov.workers.dev/__internal/vs11/4c0de5da-9c91-4a30-93b8-04a893f7713f")"
+
+          address_id="$(PROOF="$proof" node --input-type=module <<'NODE'
+          const proof = JSON.parse(process.env.PROOF);
+          if (proof.materialization_status !== "materialized") {
+            throw new Error("geo materialization failed: " + JSON.stringify(proof));
+          }
+          if (proof.latitude !== 50.4784296 || proof.longitude !== 30.3402236) {
+            throw new Error("coordinate mismatch");
+          }
+          if (!proof.address_id || !proof.claim_id || !proof.observation_id || !proof.source_snapshot_id) {
+            throw new Error("provenance ids missing");
+          }
+          process.stdout.write(proof.address_id);
+          NODE
+          )"
+
+          present="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/coverage-points?geometry=present")"
+          backlog="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/enrichment-backlog")"
+          provenance="$(curl -fsS             "https://netco.sergii-ponomarov.workers.dev/api/v1/geo/addresses/$address_id/provenance")"
+
+          PROOF="$proof" PRESENT="$present" BACKLOG="$backlog" PROVENANCE="$provenance" node --input-type=module <<'NODE'
+          const proof = JSON.parse(process.env.PROOF);
+          const present = JSON.parse(process.env.PRESENT);
+          const backlog = JSON.parse(process.env.BACKLOG);
+          const provenance = JSON.parse(process.env.PROVENANCE);
+
+          const feature = present.features?.find(
+            (item) => item.id === proof.address_id,
+          );
+          if (!feature) throw new Error("materialized point missing");
+          if (feature.geometry?.type !== "Point") throw new Error("Point geometry missing");
+
+          const [lon, lat] = feature.geometry.coordinates;
+          if (lat !== 50.4784296 || lon !== 30.3402236) {
+            throw new Error("GeoJSON coordinate mismatch");
+          }
+
+          if ((backlog.items ?? []).some((item) => item.address_id === proof.address_id)) {
+            throw new Error("materialized address remains in backlog");
+          }
+
+          if (provenance.claim?.id !== proof.claim_id) {
+            throw new Error("claim provenance mismatch");
+          }
+          if (provenance.observation?.id !== proof.observation_id) {
+            throw new Error("observation provenance mismatch");
+          }
+          if (provenance.snapshot?.id !== proof.source_snapshot_id) {
+            throw new Error("snapshot provenance mismatch");
+          }
+          if (provenance.source?.metadata?.collection_complete !== true) {
+            throw new Error("bounded source not marked complete");
+          }
+
+          console.log(JSON.stringify({
+            proof,
+            feature,
+            backlog_count: backlog.count,
+            provenance: {
+              claim_id: provenance.claim.id,
+              observation_id: provenance.observation.id,
+              snapshot_id: provenance.snapshot.id,
+              source_id: provenance.source.id,
+              source_reference: provenance.observation.payload.source_reference,
+              attribution: provenance.source.metadata.attribution,
+            },
+          }, null, 2));
+          NODE
