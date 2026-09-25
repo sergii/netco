@@ -2,14 +2,13 @@ import {
   checkProviderAvailability,
   findProvidersForAddress,
 } from "../application/coverage";
+import {
+  getProviderCoverageCheckerInteraction,
+  getProviderCoverageCheckerInterface,
+} from "../application/coverage-checker";
 import { listCoverageInventory } from "../application/coverage-inventory";
 import type { CapabilityFailure } from "../application/result";
 import type { AddressInput } from "../coverage/address";
-import {
-  getCoverageCheckerInterface,
-  getCoverageCheckerInteraction,
-} from "../coverage/store";
-import { findSource } from "../sources/registry";
 
 export interface CoverageRouteEnv {
   DATABASE?: Hyperdrive;
@@ -64,7 +63,10 @@ function capabilityFailureResult(
   const status =
     failure.code === "coverage_schema_unavailable"
       ? 503
-      : failure.code === "address_coverage_not_observed"
+      : failure.code === "address_coverage_not_observed" ||
+          failure.code === "coverage_checker_not_registered" ||
+          failure.code === "coverage_checker_probe_not_found" ||
+          failure.code === "coverage_checker_interaction_not_found"
         ? 404
         : failure.code.startsWith("address_") ||
             failure.code === "freshness_invalid"
@@ -165,74 +167,17 @@ export async function coverageRoute(
       : capabilityFailureResult(result);
   }
 
-  const source = findSource(`${providerSlug}-coverage`);
-  if (!source || source.kind !== "address_checker") {
-    return {
-      status: 404,
-      body: {
-        error: "coverage_checker_not_registered",
-        provider: providerSlug,
-      },
-    };
-  }
+  const result = interactionMatch
+    ? await getProviderCoverageCheckerInteraction(
+        env.DATABASE,
+        providerSlug,
+      )
+    : await getProviderCoverageCheckerInterface(
+        env.DATABASE,
+        providerSlug,
+      );
 
-  if (interactionMatch) {
-    const interaction = await getCoverageCheckerInteraction(
-      env.DATABASE,
-      source.id,
-    );
-
-    if (!interaction) {
-      return {
-        status: 404,
-        body: {
-          error: "coverage_checker_interaction_not_found",
-          provider: providerSlug,
-        },
-      };
-    }
-
-    return {
-      status: 200,
-      body: {
-        provider: providerSlug,
-        source: {
-          id: source.id,
-          slug: source.slug,
-          kind: source.kind,
-          canonical_url: source.canonical_url,
-        },
-        interaction,
-      },
-    };
-  }
-
-  const observation = await getCoverageCheckerInterface(
-    env.DATABASE,
-    source.id,
-  );
-
-  if (!observation) {
-    return {
-      status: 404,
-      body: {
-        error: "coverage_checker_probe_not_found",
-        provider: providerSlug,
-      },
-    };
-  }
-
-  return {
-    status: 200,
-    body: {
-      provider: checkerMatch![1],
-      source: {
-        id: source.id,
-        slug: source.slug,
-        kind: source.kind,
-        canonical_url: source.canonical_url,
-      },
-      interface: observation,
-    },
-  };
+  return result.ok
+    ? { status: 200, body: result.value }
+    : capabilityFailureResult(result);
 }
