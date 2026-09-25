@@ -1,4 +1,5 @@
 import { getDatabaseStatus } from "../db/status";
+import { getGeoEnrichmentBacklog } from "../geo/enrichment-backlog";
 import {
   getCoveragePointFeatureCollection,
   type CoverageGeometryFilter,
@@ -20,7 +21,12 @@ export async function geoRoute(
   if (request.method !== "GET") return null;
 
   const url = new URL(request.url);
-  if (url.pathname !== "/api/v1/geo/coverage-points") {
+  const coveragePoints =
+    url.pathname === "/api/v1/geo/coverage-points";
+  const enrichmentBacklog =
+    url.pathname === "/api/v1/geo/enrichment-backlog";
+
+  if (!coveragePoints && !enrichmentBacklog) {
     return null;
   }
 
@@ -39,6 +45,13 @@ export async function geoRoute(
         error: "coverage_schema_unavailable",
         coverage_tables: status.coverage_tables,
       },
+    };
+  }
+
+  if (enrichmentBacklog) {
+    return {
+      status: 200,
+      body: await getGeoEnrichmentBacklog(env.DATABASE),
     };
   }
 
