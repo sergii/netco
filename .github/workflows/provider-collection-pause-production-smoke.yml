@@ -1,0 +1,51 @@
+name: Provider Collection Pause Production Smoke
+
+on:
+  push:
+    branches:
+      - test/provider-collection-pause-production-smoke
+    paths:
+      - ".github/workflows/provider-collection-pause-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify collection pause and persisted coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          meta="$(curl -fsS "https://netco.sergii-ponomarov.workers.dev/api/v1/meta")"
+          coverage="$(curl -fsS --get             --data-urlencode "country_code=UA"             --data-urlencode "city=Київ"             --data-urlencode "street=Клавдіївська"             --data-urlencode "house_number=40А"             "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/address")"
+
+          META="$meta" COVERAGE="$coverage" node --input-type=module <<'NODE'
+          const meta = JSON.parse(process.env.META);
+          const coverage = JSON.parse(process.env.COVERAGE);
+
+          if (meta.capabilities?.provider_collection_enabled !== false) {
+            throw new Error("provider collection is not paused");
+          }
+          if (meta.capabilities?.coverage_checker_probe !== false) {
+            throw new Error("coverage checker probe still enabled");
+          }
+          if (meta.capabilities?.coverage_checker_interaction !== false) {
+            throw new Error("coverage checker interaction still enabled");
+          }
+
+          const lanet = coverage.providers?.find((provider) => provider.slug === "lanet");
+          if (!lanet) throw new Error("persisted Lanet coverage disappeared");
+
+          console.log(JSON.stringify({
+            stage: meta.stage,
+            provider_collection_enabled: meta.capabilities.provider_collection_enabled,
+            coverage_checker_probe: meta.capabilities.coverage_checker_probe,
+            coverage_checker_interaction: meta.capabilities.coverage_checker_interaction,
+            persisted_provider: lanet.slug,
+            persisted_rows: lanet.availability.length,
+          }, null, 2));
+          NODE
