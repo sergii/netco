@@ -29,7 +29,7 @@ interface ObservationBase {
   id: string;
   schema_version: "1";
   extractor: "deterministic-domain-html";
-  extractor_version: "3";
+  extractor_version: "4";
   normalizer_version: "1";
   extracted_at: string;
   validation_status: "valid" | "partial" | "invalid";
@@ -90,7 +90,7 @@ function baseObservation(): Omit<ObservationBase, "validation_status" | "validat
     id: crypto.randomUUID(),
     schema_version: "1",
     extractor: "deterministic-domain-html",
-    extractor_version: "3",
+    extractor_version: "4",
     normalizer_version: "1",
     extracted_at: new Date().toISOString(),
   };
@@ -141,10 +141,10 @@ function extractPlans(text: string): PlanObservation["payload"]["plans"] {
       /(?:^|\s)(\d{1,5}(?:[.,]\d{1,2})?)\s*грн(?=\s|[/.,;:)]|$)/i,
     );
     const promoDurationMatch = segment.match(
-      /\b(?:протягом|перші|перших)\s+(\d{1,2})\s+місяц/i,
+      /(?:^|[\s(])(?:протягом|перші|перших)\s+(\d{1,2})\s+місяц/i,
     );
 
-    if (!speedMatch && !priceMatch) {
+    if (!speedMatch || !priceMatch) {
       continue;
     }
 
@@ -331,7 +331,7 @@ export async function extractDomainEvidence(
       );
     }
 
-    const plans = extractPlans(text);
+    const plans = extractPlans(primaryText);
     const observation: PlanObservation = {
       ...baseObservation(),
       schema_name: "plan-observation",
