@@ -106,7 +106,7 @@ export default {
       const status = {
         ...evidence,
         ready: evidence.bindings.snapshots && database.schema_ready,
-        database,
+        database: { ...database },
       };
 
       return json(status, status.ready ? 200 : 503, headers);
