@@ -32,10 +32,18 @@ jobs:
                 const rows = body.extractions;
                 if (!Array.isArray(rows)) process.exit(1);
 
-                const bySchema = new Map(rows.map(row => [row.schema_name, row]));
-                const plan = bySchema.get("plan-observation");
-                const technology = bySchema.get("technology-observation");
-                const coverage = bySchema.get("coverage-entrypoint-observation");
+                const plan = rows.find(row =>
+                  row.schema_name === "plan-observation" &&
+                  row.validation_status === "valid"
+                );
+                const technology = rows.find(row =>
+                  row.schema_name === "technology-observation" &&
+                  row.validation_status === "valid"
+                );
+                const coverage = rows.find(row =>
+                  row.schema_name === "coverage-entrypoint-observation" &&
+                  row.validation_status === "valid"
+                );
 
                 const predicates = rows.flatMap(row =>
                   Array.isArray(row.claims)
