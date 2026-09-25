@@ -4,6 +4,7 @@ import { discoverSnapshotUrls } from "../crawl/discovery";
 import { fetchCrawlCandidates } from "../crawl/candidate-fetch";
 import { extractPendingDomainEvidence } from "../extraction/runner";
 import { rebuildProviderProjection } from "../projection/provider";
+import { getDatabaseStatus } from "../db/status";
 import {
   collectionEnabledSources,
   findSource,
@@ -124,6 +125,8 @@ export async function collectScheduledSources(
   bucket: R2Bucket,
   database: Hyperdrive,
 ): Promise<void> {
+  const databaseStatus = await getDatabaseStatus(database);
+
   for (const source of collectionEnabledSources()) {
     try {
       const result = await collectAndPersistKnownSource(
@@ -188,10 +191,17 @@ export async function collectScheduledSources(
         source,
       );
 
-      const providerProjection = await rebuildProviderProjection(
-        database,
-        source,
-      );
+      const providerProjection = databaseStatus.projection_schema_ready
+        ? await rebuildProviderProjection(database, source)
+        : {
+            status: "skipped" as const,
+            provider_id: null,
+            resolution_case_id: null,
+            plans: 0,
+            plan_versions_inserted: 0,
+            current_plans: 0,
+            current_technologies: 0,
+          };
 
       console.log("scheduled_source_collection", {
         source: source.slug,
