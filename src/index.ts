@@ -4,23 +4,13 @@ import { getDatabaseStatus } from "./db/status";
 import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
 import { coverageRoute } from "./routes/coverage";
-import {
-  probeLanetCoverageChecker,
-  type BrowserRunBinding,
-} from "./coverage/probe";
-import {
-  probeLanetCoverageInteraction,
-} from "./coverage/interaction-probe";
-import {
-  materializeLanetCoverageOrderability,
-} from "./coverage/orderability-materializer";
 import type { BrowserWorker } from "@cloudflare/playwright";
 import { explorerPage } from "./ui/explorer";
 
 export interface Env {
   SNAPSHOTS?: R2Bucket;
   DATABASE?: Hyperdrive;
-  BROWSER?: BrowserRunBinding & BrowserWorker;
+  BROWSER?: BrowserWorker;
 }
 
 type JsonValue =
@@ -112,8 +102,9 @@ export default {
             provider_resolution: true,
             provider_projections: true,
             providers: true,
-            coverage_checker_probe: Boolean(env.BROWSER),
-            coverage_checker_interaction: Boolean(env.BROWSER),
+            coverage_checker_probe: false,
+            coverage_checker_interaction: false,
+            provider_collection_enabled: false,
             address_coverage: true,
             geo: false,
             mcp: false,
@@ -228,45 +219,5 @@ export default {
 
     ctx.waitUntil(collectScheduledSources(env.SNAPSHOTS, env.DATABASE));
 
-    if (env.BROWSER) {
-      ctx.waitUntil(
-        probeLanetCoverageChecker(
-          env.BROWSER,
-          env.SNAPSHOTS,
-          env.DATABASE,
-        ).catch((error) => {
-          console.error("coverage_checker_probe_failed", {
-            source: "lanet-coverage",
-            error:
-              error instanceof Error
-                ? error.message
-                : "unknown_error",
-          });
-        }),
-      );
-
-      ctx.waitUntil(
-        probeLanetCoverageInteraction(
-          env.BROWSER,
-          env.SNAPSHOTS,
-          env.DATABASE,
-        )
-          .then(() =>
-            materializeLanetCoverageOrderability(
-              env.SNAPSHOTS!,
-              env.DATABASE!,
-            ),
-          )
-          .catch((error) => {
-            console.error("coverage_checker_interaction_pipeline_failed", {
-              source: "lanet-coverage",
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "unknown_error",
-            });
-          }),
-      );
-    }
   },
 } satisfies ExportedHandler<Env>;
