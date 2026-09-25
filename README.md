@@ -32,6 +32,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0011 - Provider Probing and Collection Boundary](docs/rfcs/0011-provider-probing-collection-boundary.md)
 - [RFC 0012 - Coverage Knowledge Inventory and Freshness](docs/rfcs/0012-coverage-knowledge-inventory-freshness.md)
 - [RFC 0013 - Geo Readiness, Enrichment Backlog, and Trusted Point Materialization](docs/rfcs/0013-geo-readiness-enrichment-materialization.md)
+- [RFC 0014 - First Trusted Coordinate Source](docs/rfcs/0014-first-trusted-coordinate-source.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
@@ -48,6 +49,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, Projection / Resolution VS4, Coverage / Orderability VS5, projection-only Address Aggregation VS6, Coverage Knowledge Inventory VS7, Geo Coverage Projection VS8, Geo Enrichment Backlog VS9, and the trusted Geo Evidence Materialization boundary VS10 are deployed. Provider collection is paused by policy and runtime configuration. The next milestone is VS11: choose one trusted coordinate source and prove one positive point with full provenance before any bulk geocoding.
+Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, Projection / Resolution VS4, Coverage / Orderability VS5, projection-only Address Aggregation VS6, Coverage Knowledge Inventory VS7, Geo Coverage Projection VS8, Geo Enrichment Backlog VS9, trusted Geo Evidence Materialization VS10, and the first trusted coordinate proof VS11 are production-proven. Provider collection remains paused by policy and runtime configuration. The next milestone is VS12: viewport-bounded reads over persisted coverage points, before introducing a basemap or H3 aggregation.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
