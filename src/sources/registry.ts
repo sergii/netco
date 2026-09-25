@@ -8,8 +8,9 @@ export interface SourceDefinition {
   provider_candidate_name: string | null;
   identity_markers: readonly string[];
   collection_enabled: boolean;
-  crawl_hosts: readonly string[];
+  crawl_enabled: boolean;
   crawl_page_budget: number;
+  crawl_hosts: readonly string[];
 }
 
 export const SOURCES: readonly SourceDefinition[] = [
@@ -23,8 +24,9 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: false,
+    crawl_enabled: false,
+    crawl_page_budget: 0,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
-    crawl_page_budget: 2,
   },
   {
     id: "eebfc808-4e2d-4bc8-af56-676b413a53ab",
@@ -36,26 +38,34 @@ export const SOURCES: readonly SourceDefinition[] = [
     provider_candidate_name: "Teremki@LAN",
     identity_markers: ["teremki", "Teremki@LAN", "ТЕРЕМКИ"],
     collection_enabled: true,
+    crawl_enabled: false,
+    crawl_page_budget: 0,
     crawl_hosts: ["teremki.net.ua", "www.teremki.net.ua", "stat.teremki.net.ua"],
-    crawl_page_budget: 2,
   },
   {
-    id: "0d3a76b0-57d8-4b8e-b743-7d87b79f8c89",
-    subject_id: "820ee63f-3b2e-4b34-b1d5-3cc7bceab64d",
+    id: "41fcf95a-df8b-4aa4-812f-e12064577891",
+    subject_id: "caa2dfcc-2e1f-4d18-a760-975cc2f7a6f1",
     slug: "lanet",
     kind: "official_website",
-    name: "Lanet official website",
+    name: "Мережа Ланет official website",
     canonical_url: "https://www.lanet.ua/",
     provider_candidate_name: "Мережа Ланет",
-    identity_markers: ["lanet", "Мережа Ланет", "Ланет"],
+    identity_markers: ["lanet", "Ланет", "Мережа Ланет"],
     collection_enabled: true,
+    crawl_enabled: true,
+    crawl_page_budget: 3,
     crawl_hosts: ["lanet.ua", "www.lanet.ua"],
-    crawl_page_budget: 5,
   },
 ];
 
 export function collectionEnabledSources(): readonly SourceDefinition[] {
   return SOURCES.filter((source) => source.collection_enabled);
+}
+
+export function crawlEnabledSources(): readonly SourceDefinition[] {
+  return SOURCES.filter(
+    (source) => source.collection_enabled && source.crawl_enabled,
+  );
 }
 
 export function findSource(slug: string): SourceDefinition | undefined {
