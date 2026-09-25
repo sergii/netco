@@ -30,6 +30,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Validate MCP thin-adapter invariants
+        run: node scripts/validate-mcp-adapter.mjs
+
       - name: Validate provisioning scripts
         run: bash -n scripts/provision-hyperdrive.sh scripts/rotate-hyperdrive-credentials.sh scripts/migrate-production.sh
 
