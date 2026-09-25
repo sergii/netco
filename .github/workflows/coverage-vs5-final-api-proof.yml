@@ -1,0 +1,22 @@
+name: Coverage VS5 Final API Proof
+
+on:
+  push:
+    branches:
+      - test/coverage-vs5-final-api-proof
+    paths:
+      - ".github/workflows/coverage-vs5-final-api-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read production address availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --get             --data-urlencode "country_code=UA"             --data-urlencode "city=Київ"             --data-urlencode "street=Клавдіївська"             --data-urlencode "house_number=40А"             "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/lanet/address"
