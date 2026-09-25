@@ -1,0 +1,17 @@
+{
+  "name": "netco",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-types": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260925.0",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.0.0"
+  }
+}
