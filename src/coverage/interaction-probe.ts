@@ -347,7 +347,22 @@ async function chooseHouse(page: Page): Promise<ControlSnapshot> {
   }
 
   await control.click();
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(300);
+
+  const houseCombobox = page
+    .getByRole("combobox", { name: /будинок/i })
+    .first();
+
+  if (await houseCombobox.count()) {
+    try {
+      await houseCombobox.fill(LANET_ACCEPTANCE_FIXTURE.house_number);
+      await page.waitForTimeout(600);
+    } catch {
+      // Some house controls may expose a non-editable combobox role.
+    }
+  } else {
+    await page.waitForTimeout(300);
+  }
 
   if (
     !(await clickNamedOption(
