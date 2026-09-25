@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Read production extractions
+      - name: Read production extractions v2
         shell: bash
         run: |
           set -euo pipefail
