@@ -105,6 +105,28 @@ async function ensureCanonicalProvider(
 
   await client.query(
     `
+      INSERT INTO subjects (id, kind)
+      VALUES ($1, 'service_provider')
+      ON CONFLICT (id) DO NOTHING
+    `,
+    [source.provider_id],
+  );
+
+  const subject = await client.query<{ kind: string }>(
+    `
+      SELECT kind
+      FROM subjects
+      WHERE id = $1
+    `,
+    [source.provider_id],
+  );
+
+  if (subject.rows[0]?.kind !== "service_provider") {
+    throw new Error("canonical_subject_kind_conflict");
+  }
+
+  await client.query(
+    `
       INSERT INTO entities (
         id,
         entity_type,
@@ -113,7 +135,7 @@ async function ensureCanonicalProvider(
       VALUES ($1, 'service_provider', 'unknown')
       ON CONFLICT (id) DO NOTHING
     `,
-    [source.subject_id],
+    [source.provider_id],
   );
 
   const entity = await client.query<{ entity_type: string }>(
@@ -122,7 +144,7 @@ async function ensureCanonicalProvider(
       FROM entities
       WHERE id = $1
     `,
-    [source.subject_id],
+    [source.provider_id],
   );
 
   if (entity.rows[0]?.entity_type !== "service_provider") {
@@ -164,7 +186,7 @@ async function ensureCanonicalProvider(
         rank = EXCLUDED.rank
       RETURNING id
     `,
-    [resolutionCaseId, source.subject_id],
+    [resolutionCaseId, source.provider_id],
   );
 
   const candidateId = candidate.rows[0].id;
@@ -271,7 +293,7 @@ async function ensureCanonicalProvider(
     `,
     [
       resolutionCaseId,
-      source.subject_id,
+      source.provider_id,
       RESOLVER_VERSION,
       JSON.stringify({
         policy: RESOLVER_VERSION,
@@ -282,7 +304,7 @@ async function ensureCanonicalProvider(
   );
 
   return {
-    provider_id: source.subject_id,
+    provider_id: source.provider_id,
     resolution_case_id: resolutionCaseId,
     display_name: displayName,
     website,
@@ -405,11 +427,12 @@ async function ensurePlan(
 
 async function syncPlanVersions(
   client: import("pg").Client,
+  observedSubjectId: string,
   providerId: string,
 ): Promise<{ plans: number; versions_inserted: number }> {
   const claims = await latestAcceptedDomainClaims(
     client,
-    providerId,
+    observedSubjectId,
     "plan-observation",
     "plan.catalog_entry",
   );
@@ -556,6 +579,7 @@ async function rebuildCurrentPlans(
 
 async function rebuildCurrentTechnologies(
   client: import("pg").Client,
+  observedSubjectId: string,
   providerId: string,
 ): Promise<number> {
   await client.query(
@@ -616,16 +640,16 @@ async function rebuildCurrentTechnologies(
         rebuilt_at
       )
       SELECT
-        $1,
+        $2,
         value->>'technology',
         NULLIF(value->>'observed_label', ''),
         observed_at,
         id,
-        $2,
+        $3,
         now()
       FROM current_claims
     `,
-    [providerId, PROJECTION_VERSION],
+    [observedSubjectId, providerId, PROJECTION_VERSION],
   );
 
   return inserted.rowCount ?? 0;
@@ -634,6 +658,7 @@ async function rebuildCurrentTechnologies(
 async function rebuildProviderProfile(
   client: import("pg").Client,
   source: SourceDefinition,
+  observedSubjectId: string,
   providerId: string,
   displayName: string,
   website: string | null,
@@ -657,7 +682,7 @@ async function rebuildProviderProfile(
       WHERE subject_id = $1
         AND status = 'asserted'
     `,
-    [providerId],
+    [observedSubjectId],
   );
 
   const currentTechnologies = technologies.rows.map(
@@ -760,6 +785,7 @@ export async function rebuildProviderProjection(
 
       const planSync = await syncPlanVersions(
         client,
+        source.subject_id,
         canonical.provider_id,
       );
 
@@ -771,12 +797,14 @@ export async function rebuildProviderProjection(
       const currentTechnologies =
         await rebuildCurrentTechnologies(
           client,
+          source.subject_id,
           canonical.provider_id,
         );
 
       await rebuildProviderProfile(
         client,
         source,
+        source.subject_id,
         canonical.provider_id,
         canonical.display_name,
         canonical.website,
@@ -903,7 +931,7 @@ export async function getProviderProjection(
             ORDER BY created_at DESC, id DESC
             LIMIT 1
           ) rd ON true
-          WHERE rc.observed_subject_id = $1
+          WHERE rd.canonical_subject_id = $1
           ORDER BY rc.created_at DESC
           LIMIT 1
         `,
