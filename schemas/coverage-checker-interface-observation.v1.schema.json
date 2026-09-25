@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://netco.dev/schemas/coverage-checker-interface-observation.v1.schema.json",
+  "title": "Netco Coverage Checker Interface Observation V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_slug",
+    "url",
+    "controls",
+    "interactive_control_count",
+    "browser_ms_used"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "coverage-checker-interface-observation.v1"
+    },
+    "source_slug": {
+      "type": "string",
+      "minLength": 1
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "name",
+          "value",
+          "disabled",
+          "checked"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "textbox",
+              "combobox",
+              "searchbox",
+              "button",
+              "link",
+              "option",
+              "listbox"
+            ]
+          },
+          "name": {
+            "type": ["string", "null"]
+          },
+          "value": {
+            "type": ["string", "null"]
+          },
+          "disabled": {
+            "type": ["boolean", "null"]
+          },
+          "checked": {
+            "type": ["boolean", "null"]
+          }
+        }
+      }
+    },
+    "interactive_control_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "browser_ms_used": {
+      "type": ["number", "null"],
+      "minimum": 0
+    }
+  }
+}
