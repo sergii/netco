@@ -605,3 +605,206 @@ export async function getAllAddressAvailability(
     };
   });
 }
+
+
+export type CoverageInventoryFreshness = "all" | "fresh" | "stale";
+
+export async function listAddressCoverageInventory(
+  database: Hyperdrive,
+  freshness: CoverageInventoryFreshness = "all",
+): Promise<Record<string, unknown>> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{
+      address_id: string;
+      country_code: string;
+      region: string | null;
+      city: string;
+      district: string | null;
+      street: string;
+      house_number: string;
+      corpus: string | null;
+      building_letter: string | null;
+      postal_code: string | null;
+      normalized_key: string;
+      provider_id: string;
+      provider_slug: string | null;
+      provider_display_name: string | null;
+      service_kind: string;
+      technology: string;
+      availability_state: string;
+      observed_at: Date | string;
+      fresh_until: Date | string | null;
+      supporting_claim_id: string;
+      projection_version: string;
+      rebuilt_at: Date | string;
+    }>(
+      `
+        SELECT
+          a.id AS address_id,
+          a.country_code,
+          a.region,
+          a.city,
+          a.district,
+          a.street,
+          a.house_number,
+          a.corpus,
+          a.building_letter,
+          a.postal_code,
+          a.normalized_key,
+          paa.provider_id,
+          pp.slug AS provider_slug,
+          pp.display_name AS provider_display_name,
+          paa.service_kind,
+          paa.technology,
+          paa.availability_state,
+          paa.observed_at,
+          paa.fresh_until,
+          paa.supporting_claim_id,
+          paa.projection_version,
+          paa.rebuilt_at
+        FROM provider_address_availability paa
+        JOIN addresses a
+          ON a.id = paa.address_id
+        LEFT JOIN provider_profiles pp
+          ON pp.provider_id = paa.provider_id
+        ORDER BY
+          a.country_code,
+          a.city,
+          a.street,
+          a.house_number,
+          a.id,
+          pp.display_name NULLS LAST,
+          pp.slug NULLS LAST,
+          paa.provider_id,
+          paa.service_kind,
+          paa.technology
+      `,
+    );
+
+    const now = Date.now();
+    const addresses = new Map<
+      string,
+      {
+        address: {
+          id: string;
+          country_code: string;
+          region: string | null;
+          city: string;
+          district: string | null;
+          street: string;
+          house_number: string;
+          corpus: string | null;
+          building_letter: string | null;
+          postal_code: string | null;
+          normalized_key: string;
+        };
+        providers: Map<
+          string,
+          {
+            provider_id: string;
+            slug: string | null;
+            display_name: string | null;
+            availability: Array<Record<string, unknown>>;
+          }
+        >;
+        technologies: Set<string>;
+        availability_count: number;
+        latest_observed_at: string | null;
+        fresh_rows: number;
+      }
+    >();
+
+    for (const row of result.rows) {
+      const current = addresses.get(row.address_id) ?? {
+        address: {
+          id: row.address_id,
+          country_code: row.country_code,
+          region: row.region,
+          city: row.city,
+          district: row.district,
+          street: row.street,
+          house_number: row.house_number,
+          corpus: row.corpus,
+          building_letter: row.building_letter,
+          postal_code: row.postal_code,
+          normalized_key: row.normalized_key,
+        },
+        providers: new Map(),
+        technologies: new Set<string>(),
+        availability_count: 0,
+        latest_observed_at: null,
+        fresh_rows: 0,
+      };
+
+      const observedAt = new Date(row.observed_at).toISOString();
+      const freshUntil =
+        row.fresh_until === null
+          ? null
+          : new Date(row.fresh_until).toISOString();
+      const isFresh =
+        freshUntil !== null &&
+        new Date(freshUntil).getTime() > now;
+
+      const provider = current.providers.get(row.provider_id) ?? {
+        provider_id: row.provider_id,
+        slug: row.provider_slug,
+        display_name: row.provider_display_name,
+        availability: [],
+      };
+
+      provider.availability.push({
+        service_kind: row.service_kind,
+        technology: row.technology,
+        availability_state: row.availability_state,
+        observed_at: observedAt,
+        fresh_until: freshUntil,
+        freshness_state: isFresh ? "fresh" : "stale",
+        supporting_claim_id: row.supporting_claim_id,
+        projection_version: row.projection_version,
+        rebuilt_at: new Date(row.rebuilt_at).toISOString(),
+      });
+
+      current.providers.set(row.provider_id, provider);
+      current.technologies.add(row.technology);
+      current.availability_count += 1;
+      if (isFresh) current.fresh_rows += 1;
+
+      if (
+        current.latest_observed_at === null ||
+        new Date(observedAt).getTime() >
+          new Date(current.latest_observed_at).getTime()
+      ) {
+        current.latest_observed_at = observedAt;
+      }
+
+      addresses.set(row.address_id, current);
+    }
+
+    const inventory = [...addresses.values()]
+      .map((entry) => {
+        const freshnessState =
+          entry.fresh_rows > 0 ? "fresh" : "stale";
+
+        return {
+          address: entry.address,
+          freshness_state: freshnessState,
+          provider_count: entry.providers.size,
+          availability_count: entry.availability_count,
+          technologies: [...entry.technologies].sort(),
+          latest_observed_at: entry.latest_observed_at,
+          providers: [...entry.providers.values()],
+        };
+      })
+      .filter((entry) =>
+        freshness === "all"
+          ? true
+          : entry.freshness_state === freshness,
+      );
+
+    return {
+      freshness,
+      count: inventory.length,
+      addresses: inventory,
+    };
+  });
+}
