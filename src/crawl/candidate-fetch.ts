@@ -28,6 +28,7 @@ export async function fetchCrawlCandidates(
   bucket: R2Bucket,
   database: Hyperdrive,
   source: SourceDefinition,
+  discoveredFromSnapshotId: string,
   discovery: UrlDiscoveryObservation,
 ): Promise<CandidateFetchResult> {
   const candidates = discovery.payload.links
@@ -65,17 +66,10 @@ export async function fetchCrawlCandidates(
 
       const observation = buildPagePurposeObservation(
         source,
-        discovery.payload.base_url === snapshot.final_url
-          ? snapshot.id
-          : discovery.payload.base_url,
+        discoveredFromSnapshotId,
         link,
         snapshot,
       );
-
-      observation.payload.discovered_from_snapshot_id =
-        discovery.payload.base_url === snapshot.final_url
-          ? snapshot.id
-          : observation.payload.discovered_from_snapshot_id;
 
       await persistPagePurposeObservation(
         database,
