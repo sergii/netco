@@ -63,6 +63,7 @@ const RULES: readonly Rule[] = [
     terms: [
       "gpon",
       "xpon",
+      "xgpon",
       "pon",
       "fiber",
       "fibre",
@@ -160,15 +161,40 @@ function searchable(url: URL, anchorText: string | null): string {
     .replace(/[._/+?=&%-]+/g, " ");
 }
 
+const EXACT_TOKEN_TERMS = new Set([
+  "pon",
+  "gpon",
+  "xpon",
+  "xgpon",
+  "ftth",
+]);
+
+function matchesTerm(
+  haystack: string,
+  tokens: ReadonlySet<string>,
+  term: string,
+): boolean {
+  const normalized = term.toLocaleLowerCase();
+
+  if (EXACT_TOKEN_TERMS.has(normalized)) {
+    return tokens.has(normalized);
+  }
+
+  return haystack.includes(normalized);
+}
+
 export function classifyDiscoveredLink(
   url: URL,
   anchorText: string | null,
 ): ClassifiedLink {
   const haystack = searchable(url, anchorText);
+  const tokens = new Set(
+    haystack.split(/\s+/).filter(Boolean),
+  );
 
   for (const rule of RULES) {
     const matchedTerms = rule.terms.filter((term) =>
-      haystack.includes(term.toLocaleLowerCase()),
+      matchesTerm(haystack, tokens, term),
     );
 
     if (matchedTerms.length > 0) {
