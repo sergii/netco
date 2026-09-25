@@ -239,7 +239,10 @@ async function continueStreetStep(page: Page): Promise<void> {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     if (await button.count()) {
       if (await enabled(button)) {
-        await button.click();
+        // Lanet overlays can visually intercept pointer events even when the
+        // semantic button is visible and enabled. Force the deterministic
+        // control activation after the enabled-state check.
+        await button.click({ force: true });
         await page.waitForTimeout(500);
         return;
       }
