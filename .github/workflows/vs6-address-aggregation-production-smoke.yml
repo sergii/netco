@@ -1,0 +1,72 @@
+name: VS6 Address Aggregation Production Smoke
+
+on:
+  push:
+    branches:
+      - test/vs6-address-aggregation-production-smoke
+    paths:
+      - ".github/workflows/vs6-address-aggregation-production-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify known and unknown address semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          known="$(curl -fsS --get             --data-urlencode "country_code=UA"             --data-urlencode "city=Київ"             --data-urlencode "street=Клавдіївська"             --data-urlencode "house_number=40А"             "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/address")"
+
+          unknown="$(curl -fsS --get             --data-urlencode "country_code=UA"             --data-urlencode "city=Київ"             --data-urlencode "street=__NETCO_UNKNOWN_FIXTURE__"             --data-urlencode "house_number=999999"             "https://netco.sergii-ponomarov.workers.dev/api/v1/coverage/address")"
+
+          KNOWN="$known" UNKNOWN="$unknown" node --input-type=module <<'NODE'
+          const known = JSON.parse(process.env.KNOWN);
+          const unknown = JSON.parse(process.env.UNKNOWN);
+
+          const lanet = known.providers?.find((provider) => provider.slug === "lanet");
+          if (!lanet) throw new Error("Lanet aggregation missing");
+
+          const states = new Map(
+            (lanet.availability ?? []).map((row) => [
+              row.technology,
+              row.availability_state,
+            ]),
+          );
+
+          if (states.get("gig") !== "orderable") throw new Error("GIG missing");
+          if (states.get("xgpon") !== "orderable") throw new Error("XGPON missing");
+
+          if (!Array.isArray(unknown.providers)) {
+            throw new Error("unknown providers is not an array");
+          }
+          if (unknown.providers.length !== 0) {
+            throw new Error("unknown address fabricated provider availability");
+          }
+          if (unknown.address !== null) {
+            throw new Error("unknown address unexpectedly resolved");
+          }
+
+          console.log(JSON.stringify({
+            known: {
+              address: known.address,
+              providers: known.providers.map((provider) => ({
+                slug: provider.slug,
+                availability: provider.availability.map((row) => ({
+                  technology: row.technology,
+                  state: row.availability_state,
+                  claim: row.supporting_claim_id,
+                })),
+              })),
+            },
+            unknown: {
+              address: unknown.address,
+              providers: unknown.providers,
+              normalized_key: unknown.normalized_key,
+            },
+          }, null, 2));
+          NODE
