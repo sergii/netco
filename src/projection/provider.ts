@@ -928,10 +928,11 @@ export async function getProviderProjection(
               created_at
             FROM resolution_decisions
             WHERE resolution_case_id = rc.id
+              AND canonical_subject_id = $1
             ORDER BY created_at DESC, id DESC
             LIMIT 1
           ) rd ON true
-          WHERE rd.canonical_subject_id = $1
+          WHERE rd.decision IS NOT NULL
           ORDER BY rc.created_at DESC
           LIMIT 1
         `,
