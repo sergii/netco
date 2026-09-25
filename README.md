@@ -22,6 +22,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0001 - Provider Knowledge Model](docs/rfcs/0001-provider-knowledge-model.md)
 - [RFC 0002 - Ingestion, Resolution, and Enrichment Pipeline](docs/rfcs/0002-ingestion-resolution-enrichment.md)
 - [RFC 0003 - Canonical Schema and Structured Contracts](docs/rfcs/0003-canonical-schema.md)
+- [RFC 0004 - Cloudflare, Neon, Geospatial Intelligence, Maps, and MCP](docs/rfcs/0004-cloudflare-neon-geospatial-intelligence.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
@@ -29,9 +30,12 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [Provider Observation V1](schemas/provider-observation.v1.schema.json)
 - [Claim V1](schemas/claim.v1.schema.json)
 - [Entity Resolution Decision V1](schemas/entity-resolution-decision.v1.schema.json)
+- [Geo Query V1](schemas/geo-query.v1.schema.json)
 
 ## Current status
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
 The next implementation milestone is the Evidence Spine vertical slice: source snapshot -> validated observation -> claims -> provenance view.
+
+The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
