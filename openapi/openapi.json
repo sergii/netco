@@ -1,0 +1,678 @@
+{
+  "openapi": "3.2.1",
+  "info": {
+    "title": "Netco API",
+    "version": "0.1.0",
+    "description": "Evidence-backed internet provider and geospatial intelligence API."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System"
+    },
+    {
+      "name": "Sources"
+    },
+    {
+      "name": "Evidence"
+    },
+    {
+      "name": "Providers"
+    },
+    {
+      "name": "Coverage"
+    },
+    {
+      "name": "Geo"
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "getHealth",
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "getApiIndex",
+        "summary": "API index",
+        "responses": {
+          "200": {
+            "description": "API index",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "getMeta",
+        "summary": "Service metadata and capabilities",
+        "responses": {
+          "200": {
+            "description": "Service metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/status": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "operationId": "getEvidenceStatus",
+        "summary": "Evidence pipeline status",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "tags": [
+          "Sources"
+        ],
+        "operationId": "listSources",
+        "summary": "List registered sources",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{slug}": {
+      "get": {
+        "tags": [
+          "Sources"
+        ],
+        "operationId": "getSource",
+        "summary": "Get a registered source",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SourceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{slug}/provenance": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "operationId": "getSourceProvenance",
+        "summary": "Get source provenance",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SourceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{slug}/discovery": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "operationId": "getSourceDiscovery",
+        "summary": "Get latest URL discovery observation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SourceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{slug}/crawl": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "operationId": "getSourceCrawl",
+        "summary": "Get recent crawl page-purpose observations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SourceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{slug}/extractions": {
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "operationId": "getSourceExtractions",
+        "summary": "Get recent domain extractions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SourceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/providers": {
+      "get": {
+        "tags": [
+          "Providers"
+        ],
+        "operationId": "listProviders",
+        "summary": "List provider projections",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/providers/{provider}": {
+      "get": {
+        "tags": [
+          "Providers"
+        ],
+        "operationId": "getProvider",
+        "summary": "Get a provider projection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/coverage/addresses": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "operationId": "listCoverageAddresses",
+        "summary": "List address coverage inventory",
+        "parameters": [
+          {
+            "name": "freshness",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "fresh",
+                "stale"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/coverage/address": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "operationId": "getAddressAvailabilityAcrossProviders",
+        "summary": "Get address availability across providers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CountryCode"
+          },
+          {
+            "$ref": "#/components/parameters/City"
+          },
+          {
+            "$ref": "#/components/parameters/Street"
+          },
+          {
+            "$ref": "#/components/parameters/HouseNumber"
+          },
+          {
+            "$ref": "#/components/parameters/Region"
+          },
+          {
+            "$ref": "#/components/parameters/District"
+          },
+          {
+            "$ref": "#/components/parameters/Corpus"
+          },
+          {
+            "$ref": "#/components/parameters/BuildingLetter"
+          },
+          {
+            "$ref": "#/components/parameters/PostalCode"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/coverage/{provider}/checker-interface": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "operationId": "getCoverageCheckerInterface",
+        "summary": "Get provider coverage checker interface observation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/coverage/{provider}/checker-interaction": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "operationId": "getCoverageCheckerInteraction",
+        "summary": "Get provider coverage checker interaction observation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/coverage/{provider}/address": {
+      "get": {
+        "tags": [
+          "Coverage"
+        ],
+        "operationId": "getProviderAddressAvailability",
+        "summary": "Get address availability for one provider",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProviderSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CountryCode"
+          },
+          {
+            "$ref": "#/components/parameters/City"
+          },
+          {
+            "$ref": "#/components/parameters/Street"
+          },
+          {
+            "$ref": "#/components/parameters/HouseNumber"
+          },
+          {
+            "$ref": "#/components/parameters/Region"
+          },
+          {
+            "$ref": "#/components/parameters/District"
+          },
+          {
+            "$ref": "#/components/parameters/Corpus"
+          },
+          {
+            "$ref": "#/components/parameters/BuildingLetter"
+          },
+          {
+            "$ref": "#/components/parameters/PostalCode"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/geo/coverage-points": {
+      "get": {
+        "tags": [
+          "Geo"
+        ],
+        "operationId": "listCoveragePoints",
+        "summary": "Get coverage points as a GeoJSON feature collection",
+        "parameters": [
+          {
+            "name": "geometry",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "present",
+                "missing"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/geo/enrichment-backlog": {
+      "get": {
+        "tags": [
+          "Geo"
+        ],
+        "operationId": "getGeoEnrichmentBacklog",
+        "summary": "Get geo-enrichment backlog",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "JsonObject": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "parameters": {
+      "SourceSlug": {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        }
+      },
+      "ProviderSlug": {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        }
+      },
+      "CountryCode": {
+        "name": "country_code",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "City": {
+        "name": "city",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Street": {
+        "name": "street",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "HouseNumber": {
+        "name": "house_number",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Region": {
+        "name": "region",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "District": {
+        "name": "district",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Corpus": {
+        "name": "corpus",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "BuildingLetter": {
+        "name": "building_letter",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PostalCode": {
+        "name": "postal_code",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "JsonSuccess": {
+        "description": "Successful response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonObject"
+            }
+          }
+        }
+      },
+      "JsonBadRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonObject"
+            }
+          }
+        }
+      },
+      "JsonNotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonObject"
+            }
+          }
+        }
+      },
+      "JsonUnavailable": {
+        "description": "Required backend capability is unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonObject"
+            }
+          }
+        }
+      }
+    }
+  }
+}
