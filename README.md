@@ -28,6 +28,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0007 - Typed Domain Extraction and Claim Boundary](docs/rfcs/0007-typed-domain-extraction-claim-boundary.md)
 - [RFC 0008 - Provider Resolution, Plan Identity, and Rebuildable Projections](docs/rfcs/0008-provider-resolution-plan-projections.md)
 - [RFC 0009 - Address-Scoped Coverage and Orderability](docs/rfcs/0009-address-scoped-coverage-orderability.md)
+- [RFC 0010 - Multi-Provider Address Availability](docs/rfcs/0010-multi-provider-address-availability.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
@@ -44,6 +45,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, and Projection / Resolution VS4 are proven in production. The next milestone is address-scoped coverage and orderability: normalized location subjects, address-checker evidence, coverage claims, and rebuildable availability projections.
+Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, Projection / Resolution VS4, and Coverage / Orderability VS5 are proven in production. The next milestone is VS6 - multi-provider address availability: one normalized address, independent Lanet and Kyivstar checker evidence, provider-scoped claims/projections, and one aggregated address-centric read API.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
