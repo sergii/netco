@@ -920,7 +920,7 @@ export async function getPendingDomainExtractionPages(
             WHERE domain_observation.source_snapshot_id = s.id
               AND domain_observation.schema_name = ANY($2::text[])
               AND domain_observation.extractor = 'deterministic-domain-html'
-              AND domain_observation.extractor_version = '2'
+              AND domain_observation.extractor_version = '3'
           )
         ORDER BY s.fetched_at DESC
         LIMIT $3
