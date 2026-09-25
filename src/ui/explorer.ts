@@ -1,0 +1,445 @@
+export function explorerPage(): Response {
+  const html = `<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Netco Explorer</title>
+  <meta name="description" content="Evidence-backed internet provider intelligence for Ukraine">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0d12;
+      --panel: #10151d;
+      --panel-2: #151c26;
+      --line: #263141;
+      --text: #eef4fb;
+      --muted: #91a0b4;
+      --green: #54d59d;
+      --amber: #f2c96d;
+      --blue: #79aafc;
+      --red: #ff8a8a;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(80,120,190,.12), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+    }
+    button, input { font: inherit; }
+    a { color: inherit; }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 28px 22px 72px; }
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between; gap:20px;
+      margin-bottom: 42px;
+    }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .mark {
+      width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
+      background:linear-gradient(145deg,#74f0b2,#6b8dff); color:#07100c; font-weight:900;
+      box-shadow:0 10px 32px rgba(84,213,157,.18);
+    }
+    .brand-name { font-weight:760; letter-spacing:-.02em; font-size:18px; }
+    .brand-sub { color:var(--muted); font-size:12px; }
+    .live {
+      display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px;
+      border:1px solid var(--line); padding:7px 11px; border-radius:999px; background:rgba(16,21,29,.72);
+    }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px rgba(84,213,157,.1); }
+    .hero { max-width:800px; margin-bottom:34px; }
+    .eyebrow { color:var(--green); text-transform:uppercase; letter-spacing:.14em; font-size:11px; font-weight:800; }
+    h1 { font-size:clamp(36px,7vw,72px); line-height:.98; letter-spacing:-.055em; margin:12px 0 18px; }
+    .lede { color:#aeb9c8; font-size:18px; max-width:700px; }
+    .tabs { display:flex; gap:7px; flex-wrap:wrap; margin:28px 0 20px; }
+    .tab {
+      color:var(--muted); border:1px solid transparent; background:transparent;
+      padding:9px 13px; border-radius:11px; cursor:pointer;
+    }
+    .tab.active { color:var(--text); background:var(--panel-2); border-color:var(--line); }
+    .view { display:none; }
+    .view.active { display:block; }
+    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+    .card {
+      background:linear-gradient(180deg,rgba(21,28,38,.92),rgba(16,21,29,.92));
+      border:1px solid var(--line); border-radius:var(--radius); padding:20px;
+      box-shadow:0 16px 50px rgba(0,0,0,.18);
+    }
+    .metric { grid-column:span 3; min-height:122px; }
+    .metric .value { font-size:30px; font-weight:760; letter-spacing:-.04em; margin-top:12px; }
+    .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+    .lookup { grid-column:span 12; padding:24px; }
+    .lookup-head { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:20px; }
+    .lookup h2, .section-title { margin:0; font-size:22px; letter-spacing:-.025em; }
+    .help { color:var(--muted); font-size:13px; max-width:560px; }
+    .fields { display:grid; grid-template-columns:130px 1.2fr 1.7fr 110px auto; gap:10px; }
+    input {
+      width:100%; color:var(--text); background:#0b1017; border:1px solid var(--line);
+      border-radius:12px; padding:12px 13px; outline:none;
+    }
+    input:focus { border-color:#547bba; box-shadow:0 0 0 3px rgba(121,170,252,.09); }
+    .primary {
+      border:0; border-radius:12px; padding:12px 18px; cursor:pointer; font-weight:750;
+      background:var(--text); color:#0a0d12;
+    }
+    .secondary {
+      border:1px solid var(--line); border-radius:12px; padding:10px 13px; cursor:pointer;
+      background:#0b1017; color:var(--muted);
+    }
+    .results { margin-top:18px; display:grid; gap:10px; }
+    .provider-result {
+      border:1px solid var(--line); border-radius:15px; padding:16px;
+      background:rgba(10,13,18,.38);
+    }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+    .provider-title { font-size:17px; font-weight:720; }
+    .muted { color:var(--muted); }
+    .pill {
+      display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line);
+      border-radius:999px; padding:5px 9px; font-size:12px; color:var(--muted);
+    }
+    .pill.good { color:var(--green); border-color:rgba(84,213,157,.28); background:rgba(84,213,157,.06); }
+    .techs { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+    .tech { background:#141d28; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; }
+    .list { display:grid; gap:10px; margin-top:14px; }
+    .item { border:1px solid var(--line); background:var(--panel); border-radius:15px; padding:16px; }
+    .item-title { font-weight:700; }
+    .item-meta { color:var(--muted); font-size:13px; margin-top:4px; }
+    .trail {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:16px;
+    }
+    .trail-step { border:1px solid var(--line); border-radius:14px; padding:15px; min-height:105px; background:#0d1219; }
+    .trail-num { color:var(--green); font-size:11px; font-weight:800; letter-spacing:.1em; }
+    .trail-name { font-weight:700; margin:7px 0 5px; }
+    .trail-id { color:var(--muted); font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; word-break:break-all; }
+    pre {
+      margin:14px 0 0; padding:16px; border-radius:14px; overflow:auto;
+      background:#080b0f; border:1px solid var(--line); color:#afbdd0;
+      font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+    }
+    .empty { color:var(--muted); padding:20px 0; }
+    .footer { color:#607086; font-size:12px; margin-top:34px; }
+    @media (max-width: 900px) {
+      .metric { grid-column:span 6; }
+      .fields { grid-template-columns:1fr 1fr; }
+      .fields .primary { grid-column:span 2; }
+      .trail { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .shell { padding:20px 14px 48px; }
+      .topbar { margin-bottom:30px; }
+      .brand-sub { display:none; }
+      .metric { grid-column:span 12; min-height:auto; }
+      .fields { grid-template-columns:1fr; }
+      .fields .primary { grid-column:auto; }
+      .lookup-head { align-items:flex-start; flex-direction:column; }
+      .trail { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">N</div>
+        <div>
+          <div class="brand-name">Netco Explorer</div>
+          <div class="brand-sub">Evidence-backed provider intelligence</div>
+        </div>
+      </div>
+      <div class="live"><span class="dot"></span><span id="live-label">Production</span></div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">Kyiv network intelligence</div>
+      <h1>What do we actually know?</h1>
+      <div class="lede">Жива репрезентація того, що вже є в Netco: провайдери, джерела, coverage projections та evidence trail. Жоден пошук тут не запускає новий scraping.</div>
+    </section>
+
+    <nav class="tabs" aria-label="Explorer sections">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="providers">Providers</button>
+      <button class="tab" data-tab="sources">Sources</button>
+      <button class="tab" data-tab="evidence">Evidence</button>
+      <button class="tab" data-tab="system">System</button>
+    </nav>
+
+    <section id="overview" class="view active">
+      <div class="grid">
+        <div class="card metric"><div class="label">System</div><div class="value" id="metric-system">...</div><div class="muted" id="metric-system-note">checking</div></div>
+        <div class="card metric"><div class="label">Providers</div><div class="value" id="metric-providers">...</div><div class="muted">canonical projections</div></div>
+        <div class="card metric"><div class="label">Sources</div><div class="value" id="metric-sources">...</div><div class="muted">registered evidence inputs</div></div>
+        <div class="card metric"><div class="label">Stage</div><div class="value">VS6</div><div class="muted">persisted-data aggregation</div></div>
+
+        <div class="card lookup">
+          <div class="lookup-head">
+            <div>
+              <div class="label">Address knowledge</div>
+              <h2>Що Netco вже знає про цю адресу?</h2>
+            </div>
+            <button class="secondary" id="demo-address">Demo: Клавдіївська 40А</button>
+          </div>
+          <div class="fields">
+            <input id="country" value="UA" aria-label="Country code">
+            <input id="city" value="Київ" aria-label="City">
+            <input id="street" value="Клавдіївська" aria-label="Street">
+            <input id="house" value="40А" aria-label="House">
+            <button class="primary" id="lookup">Search</button>
+          </div>
+          <div class="help" style="margin-top:10px">Search reads only persisted Netco projections. It never contacts a provider website.</div>
+          <div id="results" class="results"><div class="empty">Натисни Search, щоб побачити збережене coverage evidence.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="providers" class="view">
+      <div class="card">
+        <div class="label">Canonical projections</div>
+        <h2 class="section-title">Providers</h2>
+        <div id="providers-list" class="list"><div class="empty">Loading...</div></div>
+      </div>
+    </section>
+
+    <section id="sources" class="view">
+      <div class="card">
+        <div class="label">Evidence inputs</div>
+        <h2 class="section-title">Sources</h2>
+        <div id="sources-list" class="list"><div class="empty">Loading...</div></div>
+      </div>
+    </section>
+
+    <section id="evidence" class="view">
+      <div class="card">
+        <div class="label">Provenance</div>
+        <h2 class="section-title">Evidence trail</h2>
+        <div class="help">Після address lookup тут з'являється шлях від immutable snapshot до projection. Це не окрема копія даних - UI читає production API.</div>
+        <div id="evidence-trail" class="trail">
+          <div class="trail-step"><div class="trail-num">01</div><div class="trail-name">Snapshot</div><div class="trail-id">waiting for lookup</div></div>
+          <div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Observation</div><div class="trail-id">waiting for lookup</div></div>
+          <div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Claim</div><div class="trail-id">waiting for lookup</div></div>
+          <div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Projection</div><div class="trail-id">waiting for lookup</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="system" class="view">
+      <div class="grid">
+        <div class="card" style="grid-column:span 12">
+          <div class="label">Runtime</div>
+          <h2 class="section-title">System status</h2>
+          <pre id="system-json">Loading...</pre>
+        </div>
+        <div class="card" style="grid-column:span 12">
+          <div class="label">Capabilities</div>
+          <h2 class="section-title">API metadata</h2>
+          <pre id="meta-json">Loading...</pre>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">Netco Explorer - projection-only UI - no live provider probing from user requests.</div>
+  </main>
+
+  <script>
+    const state = { providers: [], sources: [], evidence: null };
+
+    async function getJson(path) {
+      const response = await fetch(path, { headers: { accept: "application/json" } });
+      let body = null;
+      try { body = await response.json(); } catch {}
+      return { ok: response.ok, status: response.status, body };
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function shortId(value) {
+      if (!value) return "not available";
+      const text = String(value);
+      return text.length > 22 ? text.slice(0, 10) + "…" + text.slice(-8) : text;
+    }
+
+    function formatTime(value) {
+      if (!value) return "unknown";
+      const date = new Date(value);
+      return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleString("uk-UA");
+    }
+
+    function technologies(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function activateTab(name) {
+      document.querySelectorAll(".tab").forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
+      document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === name));
+    }
+
+    document.querySelectorAll(".tab").forEach((button) => {
+      button.addEventListener("click", () => activateTab(button.dataset.tab));
+    });
+
+    async function loadDashboard() {
+      const [status, providers, sources, meta] = await Promise.all([
+        getJson("/api/v1/evidence/status"),
+        getJson("/api/v1/providers"),
+        getJson("/api/v1/sources"),
+        getJson("/api/v1/meta"),
+      ]);
+
+      state.providers = providers.body?.providers ?? [];
+      state.sources = sources.body?.sources ?? [];
+
+      document.getElementById("metric-system").textContent = status.ok && status.body?.ready ? "Healthy" : "Degraded";
+      document.getElementById("metric-system-note").textContent = status.body?.database?.coverage_schema_ready ? "coverage schema ready" : "check system tab";
+      document.getElementById("metric-providers").textContent = String(state.providers.length);
+      document.getElementById("metric-sources").textContent = String(state.sources.length);
+      document.getElementById("system-json").textContent = JSON.stringify(status.body, null, 2);
+      document.getElementById("meta-json").textContent = JSON.stringify(meta.body, null, 2);
+
+      document.getElementById("providers-list").innerHTML = state.providers.length
+        ? state.providers.map((provider) => {
+            const tech = technologies(provider.current_technologies);
+            return '<div class="item"><div class="row"><div><div class="item-title">' +
+              escapeHtml(provider.display_name || provider.slug) +
+              '</div><div class="item-meta">' +
+              escapeHtml(provider.slug) + ' · observed ' + escapeHtml(formatTime(provider.last_observed_at)) +
+              '</div></div><span class="pill">' + tech.length + ' technologies</span></div>' +
+              (tech.length ? '<div class="techs">' + tech.map((t) => '<span class="tech">' + escapeHtml(t) + '</span>').join("") + '</div>' : '') +
+              '</div>';
+          }).join("")
+        : '<div class="empty">No canonical provider projections yet.</div>';
+
+      document.getElementById("sources-list").innerHTML = state.sources.length
+        ? state.sources.map((source) =>
+            '<div class="item"><div class="row"><div><div class="item-title">' +
+            escapeHtml(source.name || source.slug) +
+            '</div><div class="item-meta">' +
+            escapeHtml(source.kind) + ' · ' + escapeHtml(source.provider_slug || "unscoped") +
+            '</div></div><span class="pill">' + escapeHtml(source.slug) + '</span></div></div>'
+          ).join("")
+        : '<div class="empty">No registered sources.</div>';
+    }
+
+    function renderEvidence(availability, interaction) {
+      const first = availability?.[0] ?? null;
+      const snapshot = interaction?.interaction?.snapshot_id ?? null;
+      const observation = interaction?.interaction?.observation_id ?? null;
+      const claim = first?.supporting_claim_id ?? null;
+      const projection = first?.projection_version ?? null;
+      state.evidence = { snapshot, observation, claim, projection };
+
+      document.getElementById("evidence-trail").innerHTML =
+        '<div class="trail-step"><div class="trail-num">01</div><div class="trail-name">Snapshot</div><div class="trail-id">' + escapeHtml(snapshot || "persisted, id unavailable here") + '</div></div>' +
+        '<div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Observation</div><div class="trail-id">' + escapeHtml(observation || "persisted, id unavailable here") + '</div></div>' +
+        '<div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Claim</div><div class="trail-id">' + escapeHtml(claim || "no claim") + '</div></div>' +
+        '<div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Projection</div><div class="trail-id">' + escapeHtml(projection || "no projection") + '</div></div>';
+    }
+
+    async function lookupAddress() {
+      const country = document.getElementById("country").value.trim();
+      const city = document.getElementById("city").value.trim();
+      const street = document.getElementById("street").value.trim();
+      const house = document.getElementById("house").value.trim();
+      const results = document.getElementById("results");
+
+      if (!country || !city || !street || !house) {
+        results.innerHTML = '<div class="empty">Заповни country, city, street та house.</div>';
+        return;
+      }
+
+      results.innerHTML = '<div class="empty">Reading persisted projections...</div>';
+
+      const params = new URLSearchParams({
+        country_code: country,
+        city,
+        street,
+        house_number: house,
+      });
+
+      const rows = await Promise.all(
+        state.providers.map(async (provider) => {
+          const slug = provider.slug;
+          const response = await getJson("/api/v1/coverage/" + encodeURIComponent(slug) + "/address?" + params.toString());
+          return { provider, response };
+        }),
+      );
+
+      const known = rows.filter((row) => row.response.ok);
+      const unknown = rows.filter((row) => !row.response.ok);
+
+      if (!known.length) {
+        results.innerHTML = '<div class="provider-result"><div class="provider-title">No persisted coverage evidence</div><div class="muted">Це означає "Netco ще не знає", а не "підключення недоступне".</div></div>';
+        renderEvidence([], null);
+        return;
+      }
+
+      results.innerHTML = known.map(({ provider, response }) => {
+        const availability = response.body?.availability ?? [];
+        return '<div class="provider-result"><div class="row"><div><div class="provider-title">' +
+          escapeHtml(provider.display_name || provider.slug) +
+          '</div><div class="muted">' + escapeHtml(response.body?.address?.city || city) + ', ' +
+          escapeHtml(response.body?.address?.street || street) + ' ' +
+          escapeHtml(response.body?.address?.house_number || house) +
+          '</div></div><span class="pill good">persisted evidence</span></div>' +
+          '<div class="techs">' +
+          availability.map((item) =>
+            '<span class="tech"><strong>' + escapeHtml(String(item.technology || "unknown").toUpperCase()) +
+            '</strong> · ' + escapeHtml(item.availability_state || "unknown") +
+            '<br><span class="muted">' + escapeHtml(formatTime(item.observed_at)) + '</span></span>'
+          ).join("") +
+          '</div><div class="item-meta" style="margin-top:12px">claim ' +
+          escapeHtml(shortId(availability[0]?.supporting_claim_id)) +
+          ' · fresh until ' + escapeHtml(formatTime(availability[0]?.fresh_until)) +
+          '</div></div>';
+      }).join("") +
+      (unknown.length ? '<div class="muted" style="padding:5px 2px">No persisted address evidence for: ' +
+        unknown.map((row) => escapeHtml(row.provider.display_name || row.provider.slug)).join(", ") +
+        '. This is not an unavailable result.</div>' : '');
+
+      const firstKnown = known[0];
+      let interaction = null;
+      if (firstKnown?.provider?.slug) {
+        const interactionResponse = await getJson("/api/v1/coverage/" + encodeURIComponent(firstKnown.provider.slug) + "/checker-interaction");
+        if (interactionResponse.ok) interaction = interactionResponse.body;
+      }
+      renderEvidence(firstKnown.response.body?.availability ?? [], interaction);
+    }
+
+    document.getElementById("lookup").addEventListener("click", lookupAddress);
+    document.getElementById("demo-address").addEventListener("click", () => {
+      document.getElementById("country").value = "UA";
+      document.getElementById("city").value = "Київ";
+      document.getElementById("street").value = "Клавдіївська";
+      document.getElementById("house").value = "40А";
+      lookupAddress();
+    });
+
+    loadDashboard().catch((error) => {
+      document.getElementById("metric-system").textContent = "Error";
+      document.getElementById("metric-system-note").textContent = error instanceof Error ? error.message : "dashboard load failed";
+    });
+  </script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy":
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer",
+    },
+  });
+}
