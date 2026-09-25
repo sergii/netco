@@ -29,6 +29,7 @@ export async function fetchCrawlCandidates(
   database: Hyperdrive,
   source: SourceDefinition,
   discoveredFromSnapshotId: string,
+  discoveryObservationId: string,
   discovery: UrlDiscoveryObservation,
 ): Promise<CandidateFetchResult> {
   const candidates = discovery.payload.links
@@ -71,6 +72,7 @@ export async function fetchCrawlCandidates(
         {
           capture_kind: "crawl_candidate",
           parent_snapshot_id: discoveredFromSnapshotId,
+          discovery_observation_id: discoveryObservationId,
           expected_classification: link.classification,
           relevance_score: link.relevance_score,
         },
@@ -79,6 +81,7 @@ export async function fetchCrawlCandidates(
       const observation = buildPagePurposeObservation(
         source,
         discoveredFromSnapshotId,
+        discoveryObservationId,
         link,
         snapshot,
       );
