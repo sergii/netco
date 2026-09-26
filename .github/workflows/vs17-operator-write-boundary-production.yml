@@ -1,0 +1,70 @@
+name: VS17 Operator Write Boundary Production Proof
+
+on:
+  push:
+    branches:
+      - test/vs17-operator-write-boundary-production
+    paths:
+      - ".github/workflows/vs17-operator-write-boundary-production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify fail-closed operator writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.web33.workers.dev"
+          address_id="d1cdbb61-98c7-4045-b70a-21ed4b4e6dca"
+
+          meta="$(curl -fsS "$base/api/v1/meta")"
+          read_status="$(curl -sS -o /tmp/workspace.json -w '%{http_code}'             "$base/api/v1/operator/addresses/$address_id")"
+          write_status="$(curl -sS -o /tmp/write.json -w '%{http_code}'             -X POST             -H 'content-type: application/json'             --data '{"body":"must not be written"}'             "$base/api/v1/operator/addresses/$address_id/notes")"
+
+          META="$meta" READ_STATUS="$read_status" WRITE_STATUS="$write_status"           node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const meta = JSON.parse(process.env.META);
+          const workspace = JSON.parse(fs.readFileSync("/tmp/workspace.json", "utf8"));
+          const write = JSON.parse(fs.readFileSync("/tmp/write.json", "utf8"));
+
+          const boundary = meta.capabilities?.operator_writes;
+          if (boundary?.enabled !== false) {
+            throw new Error("operator writes unexpectedly enabled");
+          }
+          if (boundary?.mode !== "fail_closed") {
+            throw new Error("operator write mode is not fail_closed");
+          }
+          if (boundary?.boundary !== "cloudflare_access") {
+            throw new Error("unexpected operator write boundary");
+          }
+
+          if (process.env.READ_STATUS !== "200") {
+            throw new Error("operator read regression: " + process.env.READ_STATUS);
+          }
+          if (workspace.address?.id !== "d1cdbb61-98c7-4045-b70a-21ed4b4e6dca") {
+            throw new Error("operator address workspace changed");
+          }
+
+          if (process.env.WRITE_STATUS !== "503") {
+            throw new Error("write should fail closed: " + process.env.WRITE_STATUS);
+          }
+          if (write.error !== "operator_writes_disabled") {
+            throw new Error("unexpected write error: " + JSON.stringify(write));
+          }
+          if (write.boundary !== "cloudflare_access") {
+            throw new Error("write response lost boundary metadata");
+          }
+
+          console.log(JSON.stringify({
+            read_status: process.env.READ_STATUS,
+            write_status: process.env.WRITE_STATUS,
+            operator_writes: boundary,
+            address_id: workspace.address.id,
+          }, null, 2));
+          NODE
