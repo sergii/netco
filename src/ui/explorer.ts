@@ -66,15 +66,14 @@ export function explorerPage(): Response {
       display:flex;
       flex-direction:column;
     }
-    .shell.map-mode #map {
+    .shell.map-mode .map-stage {
       flex:1 1 auto;
       height:auto;
       min-height:0;
     }
-    .shell.map-mode .map-inspector {
-      flex:0 0 auto;
-      max-height:32vh;
-      overflow:auto;
+    .shell.map-mode #map {
+      height:100%;
+      min-height:0;
     }
     .shell.map-mode .footer {
       display:none;
@@ -567,13 +566,13 @@ export function explorerPage(): Response {
       .shell.map-mode #map-view .map-card {
         height:auto;
       }
-      .shell.map-mode #map {
+      .shell.map-mode .map-stage {
         height:64vh;
         min-height:420px;
       }
-      .shell.map-mode .map-inspector {
-        max-height:none;
-        overflow:visible;
+      .shell.map-mode #map {
+        height:100%;
+        min-height:0;
       }
     }
 
