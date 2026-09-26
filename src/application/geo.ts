@@ -5,7 +5,11 @@ import {
   type CoverageViewport,
 } from "../geo/coverage-points";
 import { getGeoEnrichmentBacklog } from "../geo/enrichment-backlog";
-import { getH3CoverageCellFeatureCollection } from "../geo/h3-cells";
+import {
+  getH3CoverageCellDetail,
+  getH3CoverageCellFeatureCollection,
+  h3CellIsValid,
+} from "../geo/h3-cells";
 import { getAddressGeoProvenance } from "../geo/provenance";
 import {
   capabilityFailure,
@@ -194,4 +198,28 @@ export async function listH3CoverageCells(
       viewportResult.value,
     ),
   );
+}
+
+
+export async function inspectH3CoverageCell(
+  database: Hyperdrive,
+  h3Index: string,
+): Promise<CapabilityResult<Record<string, unknown>>> {
+  const readiness = await requireCoverageSchema(database);
+  if (!readiness.ok) return readiness;
+
+  if (!h3CellIsValid(h3Index)) {
+    return capabilityFailure("h3_cell_invalid", {
+      h3_index: h3Index,
+    });
+  }
+
+  const detail = await getH3CoverageCellDetail(database, h3Index);
+  if (!detail) {
+    return capabilityFailure("h3_cell_not_found", {
+      h3_index: h3Index,
+    });
+  }
+
+  return capabilityOk(detail);
 }
