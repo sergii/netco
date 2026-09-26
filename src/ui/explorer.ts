@@ -34,6 +34,51 @@ export function explorerPage(): Response {
     button, input { font: inherit; }
     a { color: inherit; }
     .shell { max-width: 1240px; margin: 0 auto; padding: 28px 22px 72px; }
+    .shell.map-mode {
+      max-width:none;
+      height:100vh;
+      padding:14px 18px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .shell.map-mode .topbar {
+      margin-bottom:10px;
+      flex:0 0 auto;
+    }
+    .shell.map-mode .hero {
+      display:none;
+    }
+    .shell.map-mode .tabs {
+      margin:4px 0 10px;
+      flex:0 0 auto;
+    }
+    .shell.map-mode #map-view {
+      min-height:0;
+      flex:1 1 auto;
+    }
+    .shell.map-mode #map-view.active {
+      display:block;
+    }
+    .shell.map-mode #map-view .map-card {
+      height:100%;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .shell.map-mode #map {
+      flex:1 1 auto;
+      height:auto;
+      min-height:0;
+    }
+    .shell.map-mode .map-inspector {
+      flex:0 0 auto;
+      max-height:32vh;
+      overflow:auto;
+    }
+    .shell.map-mode .footer {
+      display:none;
+    }
     .topbar {
       display:flex; align-items:center; justify-content:space-between; gap:20px;
       margin-bottom: 42px;
@@ -168,6 +213,7 @@ export function explorerPage(): Response {
     }
     @media (max-width: 560px) {
       .shell { padding:20px 14px 48px; }
+      .shell.map-mode { padding:10px; }
       .topbar { margin-bottom:30px; }
       .brand-sub { display:none; }
       .metric { grid-column:span 12; min-height:auto; }
@@ -381,8 +427,10 @@ export function explorerPage(): Response {
     function activateTab(name) {
       document.querySelectorAll(".tab").forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
       document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === name));
+      document.querySelector(".shell").classList.toggle("map-mode", name === "map-view");
 
       if (name === "map-view") {
+        requestAnimationFrame(() => state.map?.resize());
         ensureMap().catch((error) => {
           document.getElementById("map-inspector").innerHTML =
             '<div class="map-empty">Помилка карти: ' +
