@@ -22,6 +22,7 @@ export interface Env {
   DATABASE?: Hyperdrive;
   BROWSER?: BrowserWorker;
   MCP_TOKEN?: string;
+  OPERATOR_WRITES_ENABLED?: string;
 }
 
 type JsonValue =
@@ -99,7 +100,10 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/v1/meta") {
       return json(
-        getServiceMeta(bindings) as unknown as JsonValue,
+        getServiceMeta(
+          bindings,
+          env.OPERATOR_WRITES_ENABLED === "true",
+        ) as unknown as JsonValue,
         200,
         headers,
       );
