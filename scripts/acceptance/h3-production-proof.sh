@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${NETCO_BASE_URL:-https://netco.sergii-ponomarov.workers.dev}"
+BASE_URL="${NETCO_BASE_URL:-https://netco.web33.workers.dev}"
 
 echo "==> Validate trusted Kyiv point at H3 resolution 9"
 KYIV="$(
