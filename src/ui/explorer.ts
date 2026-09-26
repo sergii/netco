@@ -230,14 +230,14 @@ export function explorerPage(): Response {
     .map-drawer {
       position:absolute;
       z-index:6;
-      inset:0 auto 0 0;
+      inset:0 0 0 auto;
       width:min(430px,calc(100% - 56px));
       display:flex;
       flex-direction:column;
       background:rgba(10,14,20,.98);
-      border-right:1px solid var(--line);
-      box-shadow:18px 0 50px rgba(0,0,0,.34);
-      transform:translateX(-102%);
+      border-left:1px solid var(--line);
+      box-shadow:-18px 0 50px rgba(0,0,0,.34);
+      transform:translateX(102%);
       transition:transform 180ms ease;
       pointer-events:none;
     }
