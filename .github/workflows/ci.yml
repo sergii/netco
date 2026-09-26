@@ -33,6 +33,9 @@ jobs:
       - name: Validate MCP thin-adapter invariants
         run: node scripts/validate-mcp-adapter.mjs
 
+      - name: Validate H3 persisted-data boundary
+        run: node scripts/validate-h3-read-boundary.mjs
+
       - name: Validate provisioning scripts
         run: bash -n scripts/provision-hyperdrive.sh scripts/rotate-hyperdrive-credentials.sh scripts/migrate-production.sh
 
