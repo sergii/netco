@@ -1,11 +1,6 @@
 name: Coverage Schema Reconciliation
 
 on:
-  push:
-    branches:
-      - fix/canonical-coverage-schema
-    paths:
-      - ".github/workflows/coverage-schema-reconciliation.yml"
   workflow_dispatch:
 
 permissions:
