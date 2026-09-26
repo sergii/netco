@@ -6,6 +6,7 @@ export function explorerPage(): Response {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Netco Explorer</title>
   <meta name="description" content="Evidence-backed internet provider intelligence for Ukraine">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
   <style>
     :root {
       color-scheme: dark;
@@ -121,12 +122,33 @@ export function explorerPage(): Response {
       font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
     }
     .empty { color:var(--muted); padding:20px 0; }
+    .map-card { padding:0; overflow:hidden; position:relative; }
+    .map-toolbar {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px; border-bottom:1px solid var(--line); background:var(--panel);
+    }
+    .map-title { font-weight:720; }
+    .map-meta { color:var(--muted); font-size:12px; }
+    #map { width:100%; height:min(68vh,720px); min-height:460px; background:#0d1219; }
+    .map-inspector {
+      display:grid; grid-template-columns:repeat(5,1fr); gap:10px;
+      padding:14px 16px; border-top:1px solid var(--line); background:var(--panel);
+    }
+    .map-stat { min-width:0; }
+    .map-stat strong { display:block; margin-top:4px; font-size:17px; overflow:hidden; text-overflow:ellipsis; }
+    .map-empty { grid-column:1/-1; color:var(--muted); }
+    .maplibregl-ctrl-attrib {
+      background:rgba(10,13,18,.82) !important;
+      color:#aeb9c8 !important;
+    }
+    .maplibregl-ctrl-attrib a { color:#d7e1ef !important; }
     .footer { color:#607086; font-size:12px; margin-top:34px; }
     @media (max-width: 900px) {
       .metric { grid-column:span 6; }
       .fields { grid-template-columns:1fr 1fr; }
       .fields .primary { grid-column:span 2; }
       .trail { grid-template-columns:1fr 1fr; }
+      .map-inspector { grid-template-columns:1fr 1fr 1fr; }
     }
     @media (max-width: 560px) {
       .shell { padding:20px 14px 48px; }
@@ -137,6 +159,8 @@ export function explorerPage(): Response {
       .fields .primary { grid-column:auto; }
       .lookup-head { align-items:flex-start; flex-direction:column; }
       .trail { grid-template-columns:1fr; }
+      #map { min-height:420px; height:62vh; }
+      .map-inspector { grid-template-columns:1fr 1fr; }
     }
   </style>
 </head>
@@ -161,6 +185,7 @@ export function explorerPage(): Response {
 
     <nav class="tabs" aria-label="Explorer sections">
       <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="map-view">Map</button>
       <button class="tab" data-tab="providers">Providers</button>
       <button class="tab" data-tab="sources">Sources</button>
       <button class="tab" data-tab="evidence">Evidence</button>
@@ -172,7 +197,7 @@ export function explorerPage(): Response {
         <div class="card metric"><div class="label">System</div><div class="value" id="metric-system">...</div><div class="muted" id="metric-system-note">checking</div></div>
         <div class="card metric"><div class="label">Providers</div><div class="value" id="metric-providers">...</div><div class="muted">canonical projections</div></div>
         <div class="card metric"><div class="label">Sources</div><div class="value" id="metric-sources">...</div><div class="muted">registered evidence inputs</div></div>
-        <div class="card metric"><div class="label">Stage</div><div class="value">VS6</div><div class="muted">persisted-data aggregation</div></div>
+        <div class="card metric"><div class="label">Stage</div><div class="value" id="metric-stage">...</div><div class="muted">production capability</div></div>
 
         <div class="card lookup">
           <div class="lookup-head">
@@ -191,6 +216,22 @@ export function explorerPage(): Response {
           </div>
           <div class="help" style="margin-top:10px">Search reads only persisted Netco projections. It never contacts a provider website.</div>
           <div id="results" class="results"><div class="empty">Натисни Search, щоб побачити збережене coverage evidence.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="map-view" class="view">
+      <div class="card map-card">
+        <div class="map-toolbar">
+          <div>
+            <div class="label">Persisted coverage</div>
+            <div class="map-title">Kyiv H3 coverage map</div>
+          </div>
+          <div class="map-meta"><span id="map-cell-count">0 cells</span> · H3 r9</div>
+        </div>
+        <div id="map" role="application" aria-label="Netco coverage map"></div>
+        <div id="map-inspector" class="map-inspector">
+          <div class="map-empty">Select an H3 cell to inspect what Netco already knows.</div>
         </div>
       </div>
     </section>
@@ -244,7 +285,14 @@ export function explorerPage(): Response {
   </main>
 
   <script>
-    const state = { providers: [], sources: [], evidence: null };
+    const state = {
+      providers: [],
+      sources: [],
+      evidence: null,
+      map: null,
+      maplibregl: null,
+      mapReady: false,
+    };
 
     async function getJson(path) {
       const response = await fetch(path, { headers: { accept: "application/json" } });
@@ -281,6 +329,15 @@ export function explorerPage(): Response {
     function activateTab(name) {
       document.querySelectorAll(".tab").forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
       document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === name));
+
+      if (name === "map-view") {
+        ensureMap().catch((error) => {
+          document.getElementById("map-inspector").innerHTML =
+            '<div class="map-empty">Map failed: ' +
+            escapeHtml(error instanceof Error ? error.message : "unknown error") +
+            '</div>';
+        });
+      }
     }
 
     document.querySelectorAll(".tab").forEach((button) => {
@@ -302,6 +359,8 @@ export function explorerPage(): Response {
       document.getElementById("metric-system-note").textContent = status.body?.database?.coverage_schema_ready ? "coverage schema ready" : "check system tab";
       document.getElementById("metric-providers").textContent = String(state.providers.length);
       document.getElementById("metric-sources").textContent = String(state.sources.length);
+      document.getElementById("metric-stage").textContent =
+        meta.body?.stage === "h3-aggregation-vs13" ? "VS13" : (meta.body?.stage || "unknown");
       document.getElementById("system-json").textContent = JSON.stringify(status.body, null, 2);
       document.getElementById("meta-json").textContent = JSON.stringify(meta.body, null, 2);
 
@@ -342,6 +401,183 @@ export function explorerPage(): Response {
         '<div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Observation</div><div class="trail-id">' + escapeHtml(observation || "persisted, id unavailable here") + '</div></div>' +
         '<div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Claim</div><div class="trail-id">' + escapeHtml(claim || "no claim") + '</div></div>' +
         '<div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Projection</div><div class="trail-id">' + escapeHtml(projection || "no projection") + '</div></div>';
+    }
+
+    function mapInitialState() {
+      const params = new URL(window.location.href).searchParams;
+      const lng = Number(params.get("lng"));
+      const lat = Number(params.get("lat"));
+      const zoom = Number(params.get("z"));
+
+      return {
+        center: [
+          Number.isFinite(lng) ? lng : 30.340224,
+          Number.isFinite(lat) ? lat : 50.47843,
+        ],
+        zoom: Number.isFinite(zoom) ? Math.min(Math.max(zoom, 3), 18) : 13.5,
+      };
+    }
+
+    function persistMapState() {
+      if (!state.map) return;
+      const center = state.map.getCenter();
+      const url = new URL(window.location.href);
+      url.searchParams.set("lng", center.lng.toFixed(5));
+      url.searchParams.set("lat", center.lat.toFixed(5));
+      url.searchParams.set("z", state.map.getZoom().toFixed(2));
+      history.replaceState(null, "", url);
+    }
+
+    async function refreshMapData() {
+      if (!state.mapReady || !state.map) return;
+
+      const bounds = state.map.getBounds();
+      const params = new URLSearchParams({
+        resolution: "9",
+        west: String(bounds.getWest()),
+        south: String(bounds.getSouth()),
+        east: String(bounds.getEast()),
+        north: String(bounds.getNorth()),
+      });
+
+      const response = await getJson(
+        "/api/v1/geo/h3-cells?" + params.toString(),
+      );
+
+      if (!response.ok) {
+        throw new Error(response.body?.error || "h3_query_failed");
+      }
+
+      const data = response.body;
+      const source = state.map.getSource("netco-h3");
+      if (source) source.setData(data);
+
+      document.getElementById("map-cell-count").textContent =
+        String(data?.count ?? 0) + ((data?.count ?? 0) === 1 ? " cell" : " cells");
+    }
+
+    function renderMapCell(properties) {
+      const technologies = Array.isArray(properties.technologies)
+        ? properties.technologies
+        : typeof properties.technologies === "string"
+          ? JSON.parse(properties.technologies)
+          : [];
+
+      document.getElementById("map-inspector").innerHTML =
+        '<div class="map-stat"><div class="label">H3 cell</div><strong>' +
+        escapeHtml(properties.h3_index || "unknown") +
+        '</strong></div>' +
+        '<div class="map-stat"><div class="label">Addresses</div><strong>' +
+        escapeHtml(properties.address_count ?? 0) +
+        '</strong></div>' +
+        '<div class="map-stat"><div class="label">Providers</div><strong>' +
+        escapeHtml(properties.provider_count ?? 0) +
+        '</strong></div>' +
+        '<div class="map-stat"><div class="label">Availability</div><strong>' +
+        escapeHtml(properties.availability_count ?? 0) +
+        '</strong></div>' +
+        '<div class="map-stat"><div class="label">Technologies</div><strong>' +
+        escapeHtml(technologies.join(", ") || "none") +
+        '</strong></div>';
+    }
+
+    async function ensureMap() {
+      if (state.map) {
+        state.map.resize();
+        return;
+      }
+
+      const maplibregl = await import(
+        "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs"
+      );
+      state.maplibregl = maplibregl;
+
+      const initial = mapInitialState();
+      const map = new maplibregl.Map({
+        container: "map",
+        style: "https://tiles.openfreemap.org/styles/liberty",
+        center: initial.center,
+        zoom: initial.zoom,
+        attributionControl: false,
+      });
+      state.map = map;
+
+      map.addControl(
+        new maplibregl.NavigationControl({ visualizePitch: true }),
+        "top-right",
+      );
+      map.addControl(
+        new maplibregl.AttributionControl({
+          compact: true,
+          customAttribution:
+            '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>',
+        }),
+        "bottom-right",
+      );
+
+      map.on("load", async () => {
+        map.addSource("netco-h3", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [],
+          },
+        });
+
+        map.addLayer({
+          id: "netco-h3-fill",
+          type: "fill",
+          source: "netco-h3",
+          paint: {
+            "fill-color": "#35b982",
+            "fill-opacity": [
+              "interpolate",
+              ["linear"],
+              ["coalesce", ["get", "address_count"], 1],
+              1,
+              0.3,
+              10,
+              0.7,
+            ],
+          },
+        });
+
+        map.addLayer({
+          id: "netco-h3-outline",
+          type: "line",
+          source: "netco-h3",
+          paint: {
+            "line-color": "#d9fff0",
+            "line-width": 2,
+            "line-opacity": 0.9,
+          },
+        });
+
+        map.on("click", "netco-h3-fill", (event) => {
+          const feature = event.features?.[0];
+          if (feature) renderMapCell(feature.properties || {});
+        });
+
+        map.on("mouseenter", "netco-h3-fill", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+
+        map.on("mouseleave", "netco-h3-fill", () => {
+          map.getCanvas().style.cursor = "";
+        });
+
+        state.mapReady = true;
+        await refreshMapData();
+      });
+
+      map.on("moveend", () => {
+        persistMapState();
+        refreshMapData().catch((error) => {
+          document.getElementById("map-cell-count").textContent =
+            "query error";
+          console.error("netco_map_refresh_failed", error);
+        });
+      });
     }
 
     async function lookupAddress() {
@@ -455,7 +691,7 @@ export function explorerPage(): Response {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       "content-security-policy":
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://unpkg.com https://tiles.openfreemap.org; img-src 'self' data: blob: https://tiles.openfreemap.org; worker-src blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
     },
