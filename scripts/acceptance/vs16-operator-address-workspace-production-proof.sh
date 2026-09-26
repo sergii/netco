@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${NETCO_BASE_URL:-https://netco.sergii-ponomarov.workers.dev}"
+BASE_URL="${NETCO_BASE_URL:-https://netco.web33.workers.dev}"
 ADDRESS_ID="d1cdbb61-98c7-4045-b70a-21ed4b4e6dca"
 
 echo "==> VS16 operator address workspace"
