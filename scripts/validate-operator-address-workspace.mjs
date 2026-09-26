@@ -32,7 +32,7 @@ for (const required of [
   }
 }
 
-if (!route.includes("/api/v1/operator/addresses/")) {
+if (!route.includes("api\\/v1\\/operator\\/addresses")) {
   throw new Error("operator address route is missing");
 }
 
