@@ -1,0 +1,32 @@
+name: VS16 Operator Address Workspace Production Proof
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/acceptance/vs16-operator-address-workspace-production-proof.sh"
+      - ".github/workflows/vs16-operator-address-workspace-production-proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: netco-vs16-production-proof
+  cancel-in-progress: true
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NETCO_BASE_URL: https://netco.sergii-ponomarov.workers.dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run VS16 production proof
+        shell: bash
+        run: bash scripts/acceptance/vs16-operator-address-workspace-production-proof.sh
