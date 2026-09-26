@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${NETCO_BASE_URL:-https://netco.sergii-ponomarov.workers.dev}"
+BASE_URL="${NETCO_BASE_URL:-https://netco.web33.workers.dev}"
 MCP_PROTOCOL_VERSION="2026-07-28"
 MCP_CLIENT_NAME="netco-production-acceptance"
 MCP_CLIENT_VERSION="1.0.0"
