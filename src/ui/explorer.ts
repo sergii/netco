@@ -540,15 +540,35 @@ export function explorerPage(): Response {
     <section id="map-view" class="view">
       <div class="card map-card">
         <div class="map-toolbar">
-          <div>
-            <div class="label">Збережене покриття</div>
-            <div class="map-title">Карта покриття Києва H3</div>
+          <div class="map-toolbar-main">
+            <div>
+              <div class="label">Збережене покриття</div>
+              <div class="map-title">Карта покриття Києва</div>
+            </div>
+            <div class="map-actions">
+              <button class="secondary" id="map-reset-kyiv">До Києва</button>
+              <div class="map-meta"><span id="map-cell-count">0 комірок</span></div>
+            </div>
           </div>
-          <div class="map-actions"><button class="secondary" id="map-reset-kyiv">До Києва</button><div class="map-meta"><span id="map-cell-count">0 комірок</span> · H3 r9</div></div>
+          <div class="map-levels" aria-label="Рівень представлення карти">
+            <span class="map-level-label">Рівень</span>
+            <button class="map-level" data-map-level="districts" disabled title="З’явиться після додавання районних геометрій">Райони</button>
+            <button class="map-level active" data-map-level="zones">Зони H3</button>
+            <button class="map-level" data-map-level="buildings">Будинки</button>
+          </div>
         </div>
-        <div id="map" role="application" aria-label="Карта покриття Netco"></div>
-        <div id="map-inspector" class="map-inspector">
-          <div class="map-empty">Оберіть H3-комірку, щоб переглянути, що Netco вже знає.</div>
+        <div class="map-stage">
+          <div id="map" role="application" aria-label="Карта покриття Netco"></div>
+          <aside id="map-drawer" class="map-drawer" aria-hidden="true" aria-label="Інспектор вибраного об’єкта">
+            <div class="map-drawer-head">
+              <div>
+                <div class="label" id="map-drawer-kicker">Об’єкт карти</div>
+                <div class="map-drawer-title" id="map-drawer-title">Деталі</div>
+              </div>
+              <button class="map-drawer-close" id="map-drawer-close" aria-label="Закрити інспектор">×</button>
+            </div>
+            <div id="map-drawer-body" class="map-drawer-body"></div>
+          </aside>
         </div>
       </div>
     </section>
