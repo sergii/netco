@@ -39,6 +39,9 @@ jobs:
       - name: Validate map inspection read boundary
         run: node scripts/validate-map-inspection-boundary.mjs
 
+      - name: Validate operator address workspace boundary
+        run: node scripts/validate-operator-address-workspace.mjs
+
       - name: Validate provisioning scripts
         run: bash -n scripts/provision-hyperdrive.sh scripts/rotate-hyperdrive-credentials.sh scripts/migrate-production.sh
 

@@ -721,6 +721,34 @@
           }
         }
       }
+    },
+    "/api/v1/operator/addresses/{address_id}": {
+      "get": {
+        "summary": "Read the internal operator workspace for a persisted address",
+        "description": "Composes persisted address, coverage, supporting evidence, geo provenance, freshness, and data-quality state without external collection.",
+        "parameters": [
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operator address workspace"
+          },
+          "404": {
+            "description": "Persisted address not found"
+          },
+          "503": {
+            "description": "Database binding or coverage schema unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
