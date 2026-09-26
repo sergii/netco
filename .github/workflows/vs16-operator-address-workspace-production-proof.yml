@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
-      NETCO_BASE_URL: https://netco.sergii-ponomarov.workers.dev
+      NETCO_BASE_URL: https://netco.web33.workers.dev
 
     steps:
       - name: Checkout
