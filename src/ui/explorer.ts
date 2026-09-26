@@ -224,11 +224,252 @@ export function explorerPage(): Response {
       #map { min-height:420px; height:62vh; }
       .map-inspector { grid-template-columns:1fr 1fr; }
     }
+
+    /* Admin shell */
+    body {
+      overflow:hidden;
+      background:var(--bg);
+    }
+    .shell,
+    .shell.map-mode {
+      max-width:none;
+      width:100%;
+      height:100vh;
+      margin:0;
+      padding:0;
+      overflow:hidden;
+      display:grid;
+      grid-template-columns:260px minmax(0,1fr);
+    }
+    .sidebar {
+      min-width:0;
+      height:100vh;
+      padding:20px 16px 16px;
+      border-right:1px solid var(--line);
+      background:#0b0f15;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .sidebar .topbar,
+    .shell.map-mode .sidebar .topbar {
+      margin:0 0 20px;
+      display:block;
+      flex:0 0 auto;
+    }
+    .sidebar .brand {
+      gap:11px;
+    }
+    .sidebar .mark {
+      width:38px;
+      height:38px;
+      border-radius:12px;
+    }
+    .sidebar-context {
+      padding:0 10px 16px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:12px;
+    }
+    .sidebar-kicker {
+      color:var(--green);
+      font-size:10px;
+      line-height:1.4;
+      text-transform:uppercase;
+      letter-spacing:.13em;
+      font-weight:800;
+    }
+    .sidebar-product {
+      margin-top:4px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .sidebar .tabs,
+    .shell.map-mode .sidebar .tabs {
+      display:grid;
+      gap:4px;
+      margin:0;
+      flex:0 0 auto;
+    }
+    .sidebar .tab {
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      padding:10px 12px;
+      border-radius:10px;
+      text-align:left;
+      color:var(--muted);
+      border:1px solid transparent;
+      background:transparent;
+    }
+    .sidebar .tab:hover {
+      color:var(--text);
+      background:rgba(255,255,255,.035);
+    }
+    .sidebar .tab.active {
+      color:var(--text);
+      background:var(--panel-2);
+      border-color:var(--line);
+    }
+    .sidebar-spacer {
+      flex:1 1 auto;
+      min-height:18px;
+    }
+    .sidebar .live {
+      flex:0 0 auto;
+      width:100%;
+      border-radius:11px;
+      justify-content:flex-start;
+      padding:9px 11px;
+    }
+    .workspace {
+      min-width:0;
+      height:100vh;
+      padding:24px 28px 36px;
+      overflow:auto;
+      display:flex;
+      flex-direction:column;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(80,120,190,.08), transparent 26rem),
+        var(--bg);
+    }
+    .workspace-header {
+      flex:0 0 auto;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:20px;
+      margin-bottom:20px;
+    }
+    .workspace-header h1 {
+      margin:4px 0 3px;
+      font-size:28px;
+      line-height:1.15;
+      letter-spacing:-.035em;
+    }
+    .workspace-subtitle {
+      color:var(--muted);
+      font-size:13px;
+      max-width:720px;
+    }
+    .workspace .hero {
+      display:none;
+    }
+    .workspace .view.active {
+      display:block;
+    }
+    .shell.map-mode .workspace {
+      overflow:hidden;
+      padding:18px 20px 20px;
+    }
+    .shell.map-mode .workspace-header {
+      margin-bottom:12px;
+    }
+    .shell.map-mode #map-view {
+      min-height:0;
+      flex:1 1 auto;
+    }
+    .shell.map-mode #map-view.active {
+      display:block;
+    }
+    .shell.map-mode #map-view .map-card {
+      height:100%;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .shell.map-mode #map {
+      flex:1 1 auto;
+      height:auto;
+      min-height:0;
+    }
+    .shell.map-mode .map-inspector {
+      flex:0 0 auto;
+      max-height:34vh;
+      overflow:auto;
+    }
+    .shell.map-mode .footer {
+      display:none;
+    }
+    @media (max-width: 900px) {
+      .shell,
+      .shell.map-mode {
+        grid-template-columns:210px minmax(0,1fr);
+      }
+      .sidebar {
+        padding-left:12px;
+        padding-right:12px;
+      }
+      .workspace {
+        padding:20px 18px 28px;
+      }
+    }
+    @media (max-width: 680px) {
+      body {
+        overflow:auto;
+      }
+      .shell,
+      .shell.map-mode {
+        height:auto;
+        min-height:100vh;
+        overflow:visible;
+        grid-template-columns:1fr;
+      }
+      .sidebar {
+        height:auto;
+        border-right:0;
+        border-bottom:1px solid var(--line);
+        padding:12px;
+      }
+      .sidebar .topbar {
+        margin-bottom:10px;
+      }
+      .sidebar-context {
+        display:none;
+      }
+      .sidebar .tabs,
+      .shell.map-mode .sidebar .tabs {
+        display:flex;
+        overflow:auto;
+        gap:6px;
+      }
+      .sidebar .tab {
+        width:auto;
+        white-space:nowrap;
+      }
+      .sidebar-spacer,
+      .sidebar .live {
+        display:none;
+      }
+      .workspace,
+      .shell.map-mode .workspace {
+        height:auto;
+        min-height:0;
+        overflow:visible;
+        padding:16px 12px 28px;
+      }
+      .workspace-header {
+        margin-bottom:14px;
+      }
+      .shell.map-mode #map-view .map-card {
+        height:auto;
+      }
+      .shell.map-mode #map {
+        height:64vh;
+        min-height:420px;
+      }
+      .shell.map-mode .map-inspector {
+        max-height:none;
+        overflow:visible;
+      }
+    }
+
   </style>
 </head>
 <body>
-  <main class="shell">
-    <header class="topbar">
+  <div class="shell">
+    <aside class="sidebar">
+      <header class="topbar">
       <div class="brand">
         <div class="mark">N</div>
         <div>
@@ -236,14 +477,12 @@ export function explorerPage(): Response {
           <div class="brand-sub">Аналітика провайдерів із доказами</div>
         </div>
       </div>
-      <div class="live"><span class="dot"></span><span id="live-label">Робоче середовище</span></div>
-    </header>
 
-    <section class="hero">
-      <div class="eyebrow">Мережева аналітика Києва</div>
-      <h1>Що ми насправді знаємо?</h1>
-      <div class="lede">Живе представлення того, що вже є в Netco: провайдери, джерела, проєкції покриття та ланцюжок доказів. Жоден пошук тут не запускає нового збору даних.</div>
-    </section>
+    </header>
+      <div class="sidebar-context">
+        <div class="sidebar-kicker">Внутрішня адмінка</div>
+        <div class="sidebar-product">Netco CRM</div>
+      </div>
 
     <nav class="tabs" aria-label="Розділи Netco Explorer">
       <button class="tab active" data-tab="overview">Огляд</button>
@@ -253,6 +492,22 @@ export function explorerPage(): Response {
       <button class="tab" data-tab="evidence">Докази</button>
       <button class="tab" data-tab="system">Система</button>
     </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="live"><span class="dot"></span><span id="live-label">Робоче середовище</span></div>
+    </aside>
+
+    <main class="workspace">
+      <header class="workspace-header">
+        <div>
+          <div class="eyebrow">Внутрішня адмінка</div>
+          <h1 id="workspace-title">Огляд</h1>
+          <div class="workspace-subtitle" id="workspace-subtitle">Операційний стан Netco та пошук по вже збережених даних.</div>
+        </div>
+      </header>
+
+
+
+
 
     <section id="overview" class="view active">
       <div class="grid">
@@ -344,7 +599,8 @@ export function explorerPage(): Response {
     </section>
 
     <div class="footer">Netco Explorer - інтерфейс лише для читання проєкцій, без живих перевірок провайдерів із запитів користувача.</div>
-  </main>
+    </main>
+  </div>
 
   <script>
     const state = {
@@ -424,10 +680,41 @@ export function explorerPage(): Response {
       }[String(value)] || String(value || "невідомий тип");
     }
 
+    const workspaceCopy = {
+      overview: {
+        title: "Огляд",
+        subtitle: "Операційний стан Netco та пошук по вже збережених даних.",
+      },
+      "map-view": {
+        title: "Карта",
+        subtitle: "Просторовий огляд збереженого покриття та перехід до доказів.",
+      },
+      providers: {
+        title: "Провайдери",
+        subtitle: "Канонічні профілі провайдерів, які вже відомі Netco.",
+      },
+      sources: {
+        title: "Джерела",
+        subtitle: "Зареєстровані джерела та межі походження даних.",
+      },
+      evidence: {
+        title: "Докази",
+        subtitle: "Ланцюжок від незмінного знімка до твердження та проєкції.",
+      },
+      system: {
+        title: "Система",
+        subtitle: "Стан runtime, схеми даних та доступних можливостей API.",
+      },
+    };
+
     function activateTab(name) {
       document.querySelectorAll(".tab").forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
       document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === name));
       document.querySelector(".shell").classList.toggle("map-mode", name === "map-view");
+
+      const copy = workspaceCopy[name] || workspaceCopy.overview;
+      document.getElementById("workspace-title").textContent = copy.title;
+      document.getElementById("workspace-subtitle").textContent = copy.subtitle;
 
       if (name === "map-view") {
         requestAnimationFrame(() => state.map?.resize());
