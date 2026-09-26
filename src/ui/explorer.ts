@@ -360,10 +360,10 @@ export function explorerPage(): Response {
     }
     .shell.map-mode .workspace {
       overflow:hidden;
-      padding:18px 20px 20px;
+      padding:24px 28px 36px;
     }
     .shell.map-mode .workspace-header {
-      margin-bottom:12px;
+      margin-bottom:20px;
     }
     .shell.map-mode #map-view {
       min-height:0;
@@ -717,14 +717,17 @@ export function explorerPage(): Response {
       document.getElementById("workspace-subtitle").textContent = copy.subtitle;
 
       if (name === "map-view") {
-        requestAnimationFrame(() => state.map?.resize());
-        ensureMap().catch((error) => {
-          document.getElementById("map-inspector").innerHTML =
-            '<div class="map-empty">Помилка карти: ' +
-            escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
-            '</div>';
+        requestAnimationFrame(() => {
+          ensureMap().catch((error) => {
+            document.getElementById("map-inspector").innerHTML =
+              '<div class="map-empty">Помилка карти: ' +
+              escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
+              '</div>';
+          });
         });
+        return;
       }
+
     }
 
     document.querySelectorAll(".tab").forEach((button) => {
@@ -798,11 +801,21 @@ export function explorerPage(): Response {
       return Number.isFinite(value) ? value : null;
     }
 
+    const MAP_STATE_VERSION = "2";
+
     function mapInitialState() {
       const params = new URL(window.location.href).searchParams;
-      const lng = optionalNumberParam(params, "lng");
-      const lat = optionalNumberParam(params, "lat");
-      const zoom = optionalNumberParam(params, "z");
+      const hasCurrentMapState =
+        params.get("map_v") === MAP_STATE_VERSION;
+      const lng = hasCurrentMapState
+        ? optionalNumberParam(params, "lng")
+        : null;
+      const lat = hasCurrentMapState
+        ? optionalNumberParam(params, "lat")
+        : null;
+      const zoom = hasCurrentMapState
+        ? optionalNumberParam(params, "z")
+        : null;
 
       return {
         center: [
@@ -820,6 +833,7 @@ export function explorerPage(): Response {
       if (!state.map) return;
       const center = state.map.getCenter();
       const url = new URL(window.location.href);
+      url.searchParams.set("map_v", MAP_STATE_VERSION);
       url.searchParams.set("lng", center.lng.toFixed(5));
       url.searchParams.set("lat", center.lat.toFixed(5));
       url.searchParams.set("z", state.map.getZoom().toFixed(2));
@@ -1032,6 +1046,9 @@ export function explorerPage(): Response {
     async function ensureMap() {
       if (state.map) {
         state.map.resize();
+        if (state.mapReady) {
+          await refreshMapData();
+        }
         return;
       }
 
