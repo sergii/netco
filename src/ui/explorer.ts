@@ -420,18 +420,29 @@ export function explorerPage(): Response {
         '<div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Projection</div><div class="trail-id">' + escapeHtml(projection || "no projection") + '</div></div>';
     }
 
+    function optionalNumberParam(params, name) {
+      const raw = params.get(name);
+      if (raw === null || raw.trim() === "") return null;
+
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    }
+
     function mapInitialState() {
       const params = new URL(window.location.href).searchParams;
-      const lng = Number(params.get("lng"));
-      const lat = Number(params.get("lat"));
-      const zoom = Number(params.get("z"));
+      const lng = optionalNumberParam(params, "lng");
+      const lat = optionalNumberParam(params, "lat");
+      const zoom = optionalNumberParam(params, "z");
 
       return {
         center: [
-          Number.isFinite(lng) ? lng : 30.340224,
-          Number.isFinite(lat) ? lat : 50.47843,
+          lng ?? 30.340224,
+          lat ?? 50.47843,
         ],
-        zoom: Number.isFinite(zoom) ? Math.min(Math.max(zoom, 3), 18) : 13.5,
+        zoom:
+          zoom === null
+            ? 13.5
+            : Math.min(Math.max(zoom, 3), 18),
       };
     }
 
