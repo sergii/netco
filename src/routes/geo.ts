@@ -2,6 +2,7 @@ import {
   getAddressGeoEvidence,
   listCoveragePoints,
   listGeoEnrichmentBacklog,
+  inspectH3CoverageCell,
   listH3CoverageCells,
   type CoveragePointsQuery,
   type H3CellsQuery,
@@ -22,7 +23,8 @@ function failureResult(
   failure: CapabilityFailure,
 ): GeoRouteResult {
   const status =
-    failure.code === "geo_provenance_not_found"
+    failure.code === "geo_provenance_not_found" ||
+    failure.code === "h3_cell_not_found"
       ? 404
       : failure.code === "coverage_schema_unavailable"
         ? 503
@@ -78,6 +80,10 @@ export async function geoRoute(
   env: GeoRouteEnv,
 ): Promise<GeoRouteResult | null> {
   const url = new URL(request.url);
+  const h3CellMatch =
+    request.method === "GET"
+      ? url.pathname.match(/^\/api\/v1\/geo\/h3-cells\/([^/]+)$/)
+      : null;
   const provenanceMatch =
     request.method === "GET"
       ? url.pathname.match(
@@ -97,6 +103,7 @@ export async function geoRoute(
   if (
     !coveragePoints &&
     !h3Cells &&
+    !h3CellMatch &&
     !enrichmentBacklog &&
     !provenanceMatch
   ) {
@@ -108,6 +115,17 @@ export async function geoRoute(
       status: 503,
       body: { error: "database_binding_unavailable" },
     };
+  }
+
+  if (h3CellMatch) {
+    const result = await inspectH3CoverageCell(
+      env.DATABASE,
+      h3CellMatch[1],
+    );
+
+    return result.ok
+      ? { status: 200, body: result.value }
+      : failureResult(result);
   }
 
   if (provenanceMatch) {

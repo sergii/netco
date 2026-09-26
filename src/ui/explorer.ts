@@ -137,6 +137,22 @@ export function explorerPage(): Response {
     .map-stat { min-width:0; }
     .map-stat strong { display:block; margin-top:4px; font-size:17px; overflow:hidden; text-overflow:ellipsis; }
     .map-empty { grid-column:1/-1; color:var(--muted); }
+    .map-detail {
+      grid-column:1/-1; border-top:1px solid var(--line); margin-top:4px;
+      padding-top:14px; display:grid; gap:10px;
+    }
+    .map-addresses { display:grid; gap:8px; }
+    .map-address {
+      display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center;
+      border:1px solid var(--line); border-radius:13px; padding:12px 13px;
+      background:#0d1219;
+    }
+    .map-address-title { font-weight:700; }
+    .map-address-meta { color:var(--muted); font-size:12px; margin-top:3px; }
+    .map-address-detail {
+      border:1px solid var(--line); border-radius:13px; padding:14px;
+      background:#0a0e14;
+    }
     .maplibregl-ctrl-attrib {
       background:rgba(10,13,18,.82) !important;
       color:#aeb9c8 !important;
@@ -292,6 +308,7 @@ export function explorerPage(): Response {
       map: null,
       maplibregl: null,
       mapReady: false,
+      selectedCell: null,
     };
 
     async function getJson(path) {
@@ -456,12 +473,41 @@ export function explorerPage(): Response {
         String(data?.count ?? 0) + ((data?.count ?? 0) === 1 ? " cell" : " cells");
     }
 
-    function renderMapCell(properties) {
-      const technologies = Array.isArray(properties.technologies)
-        ? properties.technologies
-        : typeof properties.technologies === "string"
-          ? JSON.parse(properties.technologies)
-          : [];
+    function mapTechnologies(value) {
+      if (Array.isArray(value)) return value;
+      if (typeof value !== "string") return [];
+
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function structuredAddressParams(address) {
+      const params = new URLSearchParams({
+        country_code: address.country_code,
+        city: address.city,
+        street: address.street,
+        house_number: address.house_number,
+      });
+
+      for (const key of [
+        "region",
+        "district",
+        "corpus",
+        "building_letter",
+        "postal_code",
+      ]) {
+        if (address[key]) params.set(key, address[key]);
+      }
+
+      return params;
+    }
+
+    function renderCellSummary(properties, detailHtml = "") {
+      const technologies = mapTechnologies(properties.technologies);
 
       document.getElementById("map-inspector").innerHTML =
         '<div class="map-stat"><div class="label">H3 cell</div><strong>' +
@@ -478,7 +524,126 @@ export function explorerPage(): Response {
         '</strong></div>' +
         '<div class="map-stat"><div class="label">Technologies</div><strong>' +
         escapeHtml(technologies.join(", ") || "none") +
-        '</strong></div>';
+        '</strong></div>' +
+        detailHtml;
+    }
+
+    async function inspectMapCell(properties) {
+      const h3Index = String(properties.h3_index || "");
+      renderCellSummary(
+        properties,
+        '<div class="map-detail"><div class="empty">Loading persisted addresses…</div></div>',
+      );
+
+      const response = await getJson(
+        "/api/v1/geo/h3-cells/" + encodeURIComponent(h3Index),
+      );
+
+      if (!response.ok) {
+        renderCellSummary(
+          properties,
+          '<div class="map-detail"><div class="empty">Cell detail failed: ' +
+            escapeHtml(response.body?.error || "unknown_error") +
+            '</div></div>',
+        );
+        return;
+      }
+
+      state.selectedCell = response.body;
+      const addresses = Array.isArray(response.body?.addresses)
+        ? response.body.addresses
+        : [];
+
+      const addressRows = addresses.length
+        ? addresses.map((item, index) => {
+            const address = item.address || {};
+            const label = [
+              address.city,
+              address.street,
+              address.house_number,
+            ].filter(Boolean).join(", ");
+
+            return '<div class="map-address"><div><div class="map-address-title">' +
+              escapeHtml(label || item.normalized_key || item.address_id) +
+              '</div><div class="map-address-meta">' +
+              escapeHtml(item.freshness_state || "unknown") + ' · ' +
+              escapeHtml(item.provider_count ?? 0) + ' provider · ' +
+              escapeHtml(item.availability_count ?? 0) + ' availability · ' +
+              escapeHtml((item.technologies || []).join(", ") || "no technology") +
+              '</div></div><button class="secondary" data-map-address-index="' +
+              index + '">Inspect evidence</button></div>';
+          }).join("")
+        : '<div class="empty">No persisted addresses in this cell.</div>';
+
+      renderCellSummary(
+        properties,
+        '<div class="map-detail"><div><div class="label">Addresses in cell</div>' +
+          '<div class="map-addresses">' + addressRows + '</div></div>' +
+          '<div id="map-address-detail" class="map-address-detail muted">Select an address to inspect coverage and provenance.</div></div>',
+      );
+
+      document.querySelectorAll("[data-map-address-index]").forEach((button) => {
+        button.addEventListener("click", () => {
+          inspectMapAddress(Number(button.dataset.mapAddressIndex)).catch((error) => {
+            document.getElementById("map-address-detail").innerHTML =
+              '<div class="empty">Address inspection failed: ' +
+              escapeHtml(error instanceof Error ? error.message : "unknown error") +
+              '</div>';
+          });
+        });
+      });
+    }
+
+    async function inspectMapAddress(index) {
+      const item = state.selectedCell?.addresses?.[index];
+      if (!item) throw new Error("address_not_found_in_selected_cell");
+
+      const address = item.address || {};
+      const params = structuredAddressParams(address);
+      const [coverage, provenance] = await Promise.all([
+        getJson("/api/v1/coverage/address?" + params.toString()),
+        getJson(
+          "/api/v1/geo/addresses/" +
+            encodeURIComponent(item.address_id) +
+            "/provenance",
+        ),
+      ]);
+
+      const providers = coverage.ok && Array.isArray(coverage.body?.providers)
+        ? coverage.body.providers
+        : [];
+
+      const providerHtml = providers.length
+        ? providers.map((provider) => {
+            const availability = Array.isArray(provider.availability)
+              ? provider.availability
+              : [];
+            const technologyLabels = availability
+              .map((entry) => String(entry.technology || "unknown").toUpperCase())
+              .join(", ");
+
+            return '<div class="item"><div class="item-title">' +
+              escapeHtml(provider.display_name || provider.slug || provider.provider_id) +
+              '</div><div class="item-meta">' +
+              escapeHtml(technologyLabels || "technology unknown") +
+              ' · persisted coverage projection</div></div>';
+          }).join("")
+        : '<div class="empty">No persisted provider coverage for this address.</div>';
+
+      const source = provenance.ok ? provenance.body?.source : null;
+      const claim = provenance.ok ? provenance.body?.claim : null;
+
+      document.getElementById("map-address-detail").innerHTML =
+        '<div class="label">Address evidence</div>' +
+        '<div class="item-title">' +
+        escapeHtml([address.city, address.street, address.house_number].filter(Boolean).join(", ")) +
+        '</div><div class="item-meta">address ' +
+        escapeHtml(shortId(item.address_id)) +
+        ' · geo source ' +
+        escapeHtml(source?.name || "not available") +
+        ' · observed ' +
+        escapeHtml(formatTime(claim?.observed_at)) +
+        '</div><div class="list">' + providerHtml + '</div>';
     }
 
     async function ensureMap() {
@@ -555,7 +720,14 @@ export function explorerPage(): Response {
 
         map.on("click", "netco-h3-fill", (event) => {
           const feature = event.features?.[0];
-          if (feature) renderMapCell(feature.properties || {});
+          if (!feature) return;
+
+          inspectMapCell(feature.properties || {}).catch((error) => {
+            document.getElementById("map-inspector").innerHTML =
+              '<div class="map-empty">Cell inspection failed: ' +
+              escapeHtml(error instanceof Error ? error.message : "unknown error") +
+              '</div>';
+          });
         });
 
         map.on("mouseenter", "netco-h3-fill", () => {

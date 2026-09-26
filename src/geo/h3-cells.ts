@@ -1,4 +1,4 @@
-import { cellToBoundary, latLngToCell } from "h3-js";
+import { cellToBoundary, getResolution, isValidCell, latLngToCell } from "h3-js";
 import {
   getCoveragePointRecords,
   type CoverageViewport,
@@ -87,5 +87,73 @@ export async function getH3CoverageCellFeatureCollection(
     viewport,
     count: features.length,
     features,
+  };
+}
+
+
+export function h3CellIsValid(h3Index: string): boolean {
+  return isValidCell(h3Index);
+}
+
+export async function getH3CoverageCellDetail(
+  database: Hyperdrive,
+  h3Index: string,
+): Promise<Record<string, unknown> | null> {
+  if (!isValidCell(h3Index)) return null;
+
+  const resolution = getResolution(h3Index);
+  const records = await getCoveragePointRecords(database);
+  const addresses = records
+    .filter((record) => {
+      if (
+        record.latitude === null ||
+        record.longitude === null ||
+        !Number.isFinite(record.latitude) ||
+        !Number.isFinite(record.longitude)
+      ) {
+        return false;
+      }
+
+      return latLngToCell(
+        record.latitude,
+        record.longitude,
+        resolution,
+      ) === h3Index;
+    })
+    .map((record) => ({
+      address_id: record.address_id,
+      normalized_key: record.normalized_key,
+      address: {
+        country_code: record.country_code,
+        region: record.region,
+        city: record.city,
+        district: record.district,
+        street: record.street,
+        house_number: record.house_number,
+        corpus: record.corpus,
+        building_letter: record.building_letter,
+        postal_code: record.postal_code,
+      },
+      point: {
+        latitude: record.latitude,
+        longitude: record.longitude,
+      },
+      freshness_state: record.has_fresh ? "fresh" : "stale",
+      provider_count: record.provider_count,
+      availability_count: record.availability_count,
+      technologies: [...record.technologies].sort(),
+      latest_observed_at: record.latest_observed_at,
+    }))
+    .sort((left, right) =>
+      left.normalized_key.localeCompare(right.normalized_key),
+    );
+
+  if (addresses.length === 0) return null;
+
+  return {
+    h3_index: h3Index,
+    resolution,
+    address_count: addresses.length,
+    addresses,
   };
 }

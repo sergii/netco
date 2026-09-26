@@ -48,7 +48,7 @@ export function getServiceMeta(bindings: RuntimeBindingState) {
   return {
     service: "netco",
     version: "0.1.0",
-    stage: "viewport-geo-query-vs12",
+    stage: "map-cell-inspection-vs15",
     capabilities: {
       evidence: evidence.ready,
       snapshots: evidence.bindings.snapshots,
@@ -69,7 +69,10 @@ export function getServiceMeta(bindings: RuntimeBindingState) {
       geo_evidence_materialization: true,
       trusted_geo_source: "openstreetmap-nominatim-bounded-fixture",
       geo_viewport_query: true,
-      mcp: false,
+      h3_aggregation: true,
+      map: true,
+      map_cell_inspection: true,
+      mcp: true,
     },
   };
 }

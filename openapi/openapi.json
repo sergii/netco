@@ -686,6 +686,41 @@
           }
         }
       }
+    },
+    "/api/v1/geo/h3-cells/{h3_index}": {
+      "get": {
+        "tags": [
+          "Geo"
+        ],
+        "operationId": "inspectH3CoverageCell",
+        "summary": "Inspect one persisted H3 coverage cell",
+        "description": "Returns persisted address summaries for one H3 cell. It performs no external collection, geocoding, or provider probing. Address coverage and provenance are resolved through their existing read APIs.",
+        "parameters": [
+          {
+            "name": "h3_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
     }
   },
   "components": {
