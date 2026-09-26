@@ -1,0 +1,58 @@
+name: Ukrainian UI and Map CSP Production Proof
+
+on:
+  push:
+    branches:
+      - test/ua-ui-map-csp-production
+    paths:
+      - ".github/workflows/ua-ui-map-csp-production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify Ukrainian UI and worker CSP
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.sergii-ponomarov.workers.dev"
+          headers="$(mktemp)"
+          html="$(mktemp)"
+          curl -fsS -D "$headers" "$base/" -o "$html"
+
+          grep -q 'Що ми насправді знаємо?' "$html"
+          grep -q '>Огляд</button>' "$html"
+          grep -q '>Карта</button>' "$html"
+          grep -q '>Провайдери</button>' "$html"
+          grep -q '>Джерела</button>' "$html"
+          grep -q '>Докази</button>' "$html"
+          grep -q '>Система</button>' "$html"
+          grep -q 'До Києва' "$html"
+          grep -q 'Карта покриття Києва H3' "$html"
+          grep -q '0 комірок' "$html"
+          grep -q 'data:image/svg+xml' "$html"
+
+          grep -qi 'content-security-policy:.*worker-src blob: https://unpkg.com' "$headers"
+
+          if grep -q '>Overview</button>\|>Map</button>\|>Providers</button>\|>Sources</button>\|>Evidence</button>\|>System</button>' "$html"; then
+            echo "English navigation labels remain" >&2
+            exit 1
+          fi
+
+          cells="$(curl -fsS --get             --data-urlencode "resolution=9"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base/api/v1/geo/h3-cells")"
+
+          CELLS="$cells" node --input-type=module <<'NODE'
+          const cells = JSON.parse(process.env.CELLS);
+          if (cells.count !== 1) throw new Error("expected one Kyiv H3 cell");
+          console.log(JSON.stringify({
+            ukrainian_ui: true,
+            worker_csp: "blob + unpkg",
+            kyiv_reset: true,
+            favicon_inline: true,
+            h3_cell: cells.features?.[0]?.id,
+          }, null, 2));
+          NODE
