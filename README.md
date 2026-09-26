@@ -36,6 +36,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0015 - Viewport-Bounded Coverage Point Reads](docs/rfcs/0015-viewport-bounded-coverage-points.md)
 - [RFC 0024 - First MapLibre Coverage Map](docs/rfcs/0024-first-maplibre-coverage-map.md)
 - [RFC 0025 - H3 Cell Evidence Inspection Workflow](docs/rfcs/0025-h3-cell-evidence-inspection.md)
+- [RFC 0026 - Internal Admin and Marketing Surface Boundary](docs/rfcs/0026-internal-admin-marketing-surface-boundary.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
@@ -52,6 +53,6 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 
 Early architecture and research. No implementation decisions should be treated as irreversible yet.
 
-Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, Projection / Resolution VS4, Coverage / Orderability VS5, projection-only Address Aggregation VS6, Coverage Knowledge Inventory VS7, Geo Coverage Projection VS8, Geo Enrichment Backlog VS9, trusted Geo Evidence Materialization VS10, the first trusted coordinate proof VS11, viewport-bounded Geo Reads VS12, deterministic H3 aggregation VS13, the first MapLibre map VS14, and H3 cell evidence inspection VS15 are production-proven. Provider collection remains paused by policy and runtime configuration. The next product boundary is an explicit H3 analytical layer with metric and evidence-quality encoding.
+Evidence Spine VS1, Crawler Discovery VS1, bounded Crawler VS2, typed Extraction VS3, Projection / Resolution VS4, Coverage / Orderability VS5, projection-only Address Aggregation VS6, Coverage Knowledge Inventory VS7, Geo Coverage Projection VS8, Geo Enrichment Backlog VS9, trusted Geo Evidence Materialization VS10, the first trusted coordinate proof VS11, viewport-bounded Geo Reads VS12, deterministic H3 aggregation VS13, the first MapLibre map VS14, and H3 cell evidence inspection VS15 are production-proven. Provider collection remains paused by policy and runtime configuration. The current Explorer is now the internal admin/CRM surface with a persistent left sidebar. Marketing/landing pages are a separate future surface. The next product boundary is VS16: an operator address workspace that turns the existing H3 cell -> address -> coverage -> provenance proof into a durable internal workflow.
 
 The current infrastructure hypothesis is Cloudflare Workers + Hyperdrive + Neon PostgreSQL/PostGIS, with H3 for spatial aggregation, R2 for immutable evidence, MapLibre for maps, and a shared Geo Query Engine for UI/API/MCP. This direction is documented in RFC 0004 and remains subject to validation through vertical slices.
