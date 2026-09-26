@@ -14,6 +14,17 @@ export interface OperatorAddressActivity {
   created_at: string;
 }
 
+async function operatorActivitySchemaReady(
+  database: Hyperdrive,
+): Promise<boolean> {
+  return withPostgresClient(database, async (client) => {
+    const result = await client.query<{ table_name: string | null }>(
+      "SELECT to_regclass('public.operator_address_activity')::text AS table_name",
+    );
+    return result.rows[0]?.table_name === "operator_address_activity";
+  });
+}
+
 function normalizeNoteBody(body: unknown): string | null {
   if (typeof body !== "string") return null;
   const normalized = body.trim();
@@ -29,6 +40,10 @@ export async function addOperatorAddressNote(
   body: unknown,
   actorEmail: string,
 ): Promise<CapabilityResult<OperatorAddressActivity>> {
+  if (!(await operatorActivitySchemaReady(database))) {
+    return capabilityFailure("operator_activity_schema_unavailable");
+  }
+
   const normalizedBody = normalizeNoteBody(body);
   if (!normalizedBody) {
     return capabilityFailure("operator_note_invalid", {
@@ -98,6 +113,10 @@ export async function getOperatorAddressActivity(
   count: number;
   items: OperatorAddressActivity[];
 }>> {
+  if (!(await operatorActivitySchemaReady(database))) {
+    return capabilityFailure("operator_activity_schema_unavailable");
+  }
+
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
 
   return withPostgresClient(database, async (client) => {
