@@ -1,0 +1,39 @@
+name: VS15 Map Inspection Production Proof
+
+on:
+  push:
+    branches:
+      - proof/vs15-h3-production
+    paths:
+      - ".github/workflows/vs15-map-inspection-production-proof.yml"
+      - "scripts/acceptance/vs15-map-inspection-production-proof.sh"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: netco-vs15-production-proof
+  cancel-in-progress: true
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NETCO_BASE_URL: https://netco.sergii-ponomarov.workers.dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run VS15 production proof
+        shell: bash
+        run: bash scripts/acceptance/vs15-map-inspection-production-proof.sh
