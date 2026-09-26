@@ -287,12 +287,12 @@ export function explorerPage(): Response {
         <div class="card" style="grid-column:span 12">
           <div class="label">Середовище виконання</div>
           <h2 class="section-title">Стан системи</h2>
-          <pre id="system-json">Loading...</pre>
+          <pre id="system-json">Завантаження…</pre>
         </div>
         <div class="card" style="grid-column:span 12">
           <div class="label">Можливості</div>
           <h2 class="section-title">Метадані API</h2>
-          <pre id="meta-json">Loading...</pre>
+          <pre id="meta-json">Завантаження…</pre>
         </div>
       </div>
     </section>
@@ -412,7 +412,7 @@ export function explorerPage(): Response {
       document.getElementById("metric-providers").textContent = String(state.providers.length);
       document.getElementById("metric-sources").textContent = String(state.sources.length);
       document.getElementById("metric-stage").textContent =
-        meta.body?.stage === "h3-aggregation-vs13" ? "VS13" : (meta.body?.stage || "unknown");
+        meta.body?.stage === "h3-aggregation-vs13" ? "VS13" : (meta.body?.stage || "невідомо");
       document.getElementById("system-json").textContent = JSON.stringify(status.body, null, 2);
       document.getElementById("meta-json").textContent = JSON.stringify(meta.body, null, 2);
 
@@ -559,7 +559,7 @@ export function explorerPage(): Response {
 
       document.getElementById("map-inspector").innerHTML =
         '<div class="map-stat"><div class="label">H3-комірка</div><strong>' +
-        escapeHtml(properties.h3_index || "unknown") +
+        escapeHtml(properties.h3_index || "невідомо") +
         '</strong></div>' +
         '<div class="map-stat"><div class="label">Адреси</div><strong>' +
         escapeHtml(properties.address_count ?? 0) +
@@ -591,7 +591,7 @@ export function explorerPage(): Response {
         renderCellSummary(
           properties,
           '<div class="map-detail"><div class="empty">Не вдалося завантажити дані комірки: ' +
-            escapeHtml(response.body?.error || "unknown_error") +
+            escapeHtml(response.body?.error || "невідома_помилка") +
             '</div></div>',
         );
         return;
@@ -667,7 +667,7 @@ export function explorerPage(): Response {
               ? provider.availability
               : [];
             const technologyLabels = availability
-              .map((entry) => String(entry.technology || "unknown").toUpperCase())
+              .map((entry) => String(entry.technology || "невідомо").toUpperCase())
               .join(", ");
 
             return '<div class="item"><div class="item-title">' +
@@ -836,7 +836,7 @@ export function explorerPage(): Response {
       if (!response.ok) {
         results.innerHTML =
           '<div class="provider-result"><div class="provider-title">Не вдалося прочитати покриття</div><div class="muted">' +
-          escapeHtml(response.body?.error || "unknown_error") +
+          escapeHtml(response.body?.error || "невідома_помилка") +
           '</div></div>';
         renderEvidence([], null);
         return;
@@ -869,7 +869,7 @@ export function explorerPage(): Response {
           '<div class="techs">' +
           availability.map((item) =>
             '<span class="tech"><strong>' +
-            escapeHtml(String(item.technology || "unknown").toUpperCase()) +
+            escapeHtml(String(item.technology || "невідомо").toUpperCase()) +
             '</strong> · ' + escapeHtml(translateAvailability(item.availability_state)) +
             '<br><span class="muted">' +
             escapeHtml(formatTime(item.observed_at)) +
