@@ -5,8 +5,8 @@ export function explorerPage(): Response {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Netco Explorer</title>
-  <meta name="description" content="Evidence-backed internet provider intelligence for Ukraine">
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
+  <meta name="description" content="Аналітика інтернет-провайдерів України з доказовим походженням даних">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2310151d%27/%3E%3Ctext x=%2732%27 y=%2743%27 text-anchor=%27middle%27 font-family=%27Arial%27 font-size=%2736%27 font-weight=%27700%27 fill=%27%2354d59d%27%3EN%3C/text%3E%3C/svg%3E">\n  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
   <style>
     :root {
       color-scheme: dark;
@@ -127,7 +127,7 @@ export function explorerPage(): Response {
       display:flex; align-items:center; justify-content:space-between; gap:12px;
       padding:14px 16px; border-bottom:1px solid var(--line); background:var(--panel);
     }
-    .map-title { font-weight:720; }
+    .map-title { font-weight:720; }\n    .map-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
     .map-meta { color:var(--muted); font-size:12px; }
     #map { width:100%; height:min(68vh,720px); min-height:460px; background:#0d1219; }
     .map-inspector {
@@ -187,51 +187,51 @@ export function explorerPage(): Response {
         <div class="mark">N</div>
         <div>
           <div class="brand-name">Netco Explorer</div>
-          <div class="brand-sub">Evidence-backed provider intelligence</div>
+          <div class="brand-sub">Аналітика провайдерів із доказами</div>
         </div>
       </div>
-      <div class="live"><span class="dot"></span><span id="live-label">Production</span></div>
+      <div class="live"><span class="dot"></span><span id="live-label">Робоче середовище</span></div>
     </header>
 
     <section class="hero">
-      <div class="eyebrow">Kyiv network intelligence</div>
-      <h1>What do we actually know?</h1>
-      <div class="lede">Жива репрезентація того, що вже є в Netco: провайдери, джерела, coverage projections та evidence trail. Жоден пошук тут не запускає новий scraping.</div>
+      <div class="eyebrow">Мережева аналітика Києва</div>
+      <h1>Що ми насправді знаємо?</h1>
+      <div class="lede">Живе представлення того, що вже є в Netco: провайдери, джерела, проєкції покриття та ланцюжок доказів. Жоден пошук тут не запускає нового збору даних.</div>
     </section>
 
-    <nav class="tabs" aria-label="Explorer sections">
-      <button class="tab active" data-tab="overview">Overview</button>
-      <button class="tab" data-tab="map-view">Map</button>
-      <button class="tab" data-tab="providers">Providers</button>
-      <button class="tab" data-tab="sources">Sources</button>
-      <button class="tab" data-tab="evidence">Evidence</button>
-      <button class="tab" data-tab="system">System</button>
+    <nav class="tabs" aria-label="Розділи Netco Explorer">
+      <button class="tab active" data-tab="overview">Огляд</button>
+      <button class="tab" data-tab="map-view">Карта</button>
+      <button class="tab" data-tab="providers">Провайдери</button>
+      <button class="tab" data-tab="sources">Джерела</button>
+      <button class="tab" data-tab="evidence">Докази</button>
+      <button class="tab" data-tab="system">Система</button>
     </nav>
 
     <section id="overview" class="view active">
       <div class="grid">
-        <div class="card metric"><div class="label">System</div><div class="value" id="metric-system">...</div><div class="muted" id="metric-system-note">checking</div></div>
-        <div class="card metric"><div class="label">Providers</div><div class="value" id="metric-providers">...</div><div class="muted">canonical projections</div></div>
-        <div class="card metric"><div class="label">Sources</div><div class="value" id="metric-sources">...</div><div class="muted">registered evidence inputs</div></div>
-        <div class="card metric"><div class="label">Stage</div><div class="value" id="metric-stage">...</div><div class="muted">production capability</div></div>
+        <div class="card metric"><div class="label">Система</div><div class="value" id="metric-system">...</div><div class="muted" id="metric-system-note">перевірка…</div></div>
+        <div class="card metric"><div class="label">Провайдери</div><div class="value" id="metric-providers">...</div><div class="muted">канонічні проєкції</div></div>
+        <div class="card metric"><div class="label">Джерела</div><div class="value" id="metric-sources">...</div><div class="muted">зареєстровані джерела доказів</div></div>
+        <div class="card metric"><div class="label">Етап</div><div class="value" id="metric-stage">...</div><div class="muted">можливість у робочому середовищі</div></div>
 
         <div class="card lookup">
           <div class="lookup-head">
             <div>
-              <div class="label">Address knowledge</div>
+              <div class="label">Знання про адресу</div>
               <h2>Що Netco вже знає про цю адресу?</h2>
             </div>
-            <button class="secondary" id="demo-address">Demo: Клавдіївська 40А</button>
+            <button class="secondary" id="demo-address">Демо: Клавдіївська 40А</button>
           </div>
           <div class="fields">
-            <input id="country" value="UA" aria-label="Country code">
-            <input id="city" value="Київ" aria-label="City">
-            <input id="street" value="Клавдіївська" aria-label="Street">
-            <input id="house" value="40А" aria-label="House">
-            <button class="primary" id="lookup">Search</button>
+            <input id="country" value="UA" aria-label="Код країни">
+            <input id="city" value="Київ" aria-label="Місто">
+            <input id="street" value="Клавдіївська" aria-label="Вулиця">
+            <input id="house" value="40А" aria-label="Будинок">
+            <button class="primary" id="lookup">Знайти</button>
           </div>
-          <div class="help" style="margin-top:10px">Search reads only persisted Netco projections. It never contacts a provider website.</div>
-          <div id="results" class="results"><div class="empty">Натисни Search, щоб побачити збережене coverage evidence.</div></div>
+          <div class="help" style="margin-top:10px">Пошук читає лише збережені проєкції Netco і ніколи не звертається до сайту провайдера.</div>
+          <div id="results" class="results"><div class="empty">Натисни «Знайти», щоб побачити збережені докази покриття.</div></div>
         </div>
       </div>
     </section>
@@ -240,44 +240,44 @@ export function explorerPage(): Response {
       <div class="card map-card">
         <div class="map-toolbar">
           <div>
-            <div class="label">Persisted coverage</div>
-            <div class="map-title">Kyiv H3 coverage map</div>
+            <div class="label">Збережене покриття</div>
+            <div class="map-title">Карта покриття Києва H3</div>
           </div>
-          <div class="map-meta"><span id="map-cell-count">0 cells</span> · H3 r9</div>
+          <div class="map-actions"><button class="secondary" id="map-reset-kyiv">До Києва</button><div class="map-meta"><span id="map-cell-count">0 комірок</span> · H3 r9</div></div>
         </div>
-        <div id="map" role="application" aria-label="Netco coverage map"></div>
+        <div id="map" role="application" aria-label="Карта покриття Netco"></div>
         <div id="map-inspector" class="map-inspector">
-          <div class="map-empty">Select an H3 cell to inspect what Netco already knows.</div>
+          <div class="map-empty">Оберіть H3-комірку, щоб переглянути, що Netco вже знає.</div>
         </div>
       </div>
     </section>
 
     <section id="providers" class="view">
       <div class="card">
-        <div class="label">Canonical projections</div>
-        <h2 class="section-title">Providers</h2>
-        <div id="providers-list" class="list"><div class="empty">Loading...</div></div>
+        <div class="label">Канонічні проєкції</div>
+        <h2 class="section-title">Провайдери</h2>
+        <div id="providers-list" class="list"><div class="empty">Завантаження…</div></div>
       </div>
     </section>
 
     <section id="sources" class="view">
       <div class="card">
-        <div class="label">Evidence inputs</div>
-        <h2 class="section-title">Sources</h2>
-        <div id="sources-list" class="list"><div class="empty">Loading...</div></div>
+        <div class="label">Джерела доказів</div>
+        <h2 class="section-title">Джерела</h2>
+        <div id="sources-list" class="list"><div class="empty">Завантаження…</div></div>
       </div>
     </section>
 
     <section id="evidence" class="view">
       <div class="card">
-        <div class="label">Provenance</div>
-        <h2 class="section-title">Evidence trail</h2>
-        <div class="help">Після address lookup тут з'являється шлях від immutable snapshot до projection. Це не окрема копія даних - UI читає production API.</div>
+        <div class="label">Походження даних</div>
+        <h2 class="section-title">Ланцюжок доказів</h2>
+        <div class="help">Після пошуку адреси тут з’являється шлях від незмінного знімка до проєкції. Це не окрема копія даних - інтерфейс читає робочий API.</div>
         <div id="evidence-trail" class="trail">
-          <div class="trail-step"><div class="trail-num">01</div><div class="trail-name">Snapshot</div><div class="trail-id">waiting for lookup</div></div>
-          <div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Observation</div><div class="trail-id">waiting for lookup</div></div>
-          <div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Claim</div><div class="trail-id">waiting for lookup</div></div>
-          <div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Projection</div><div class="trail-id">waiting for lookup</div></div>
+          <div class="trail-step"><div class="trail-num">01</div><div class="trail-name">Знімок</div><div class="trail-id">очікує пошуку</div></div>
+          <div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Спостереження</div><div class="trail-id">очікує пошуку</div></div>
+          <div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Твердження</div><div class="trail-id">очікує пошуку</div></div>
+          <div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Проєкція</div><div class="trail-id">очікує пошуку</div></div>
         </div>
       </div>
     </section>
@@ -285,19 +285,19 @@ export function explorerPage(): Response {
     <section id="system" class="view">
       <div class="grid">
         <div class="card" style="grid-column:span 12">
-          <div class="label">Runtime</div>
-          <h2 class="section-title">System status</h2>
+          <div class="label">Середовище виконання</div>
+          <h2 class="section-title">Стан системи</h2>
           <pre id="system-json">Loading...</pre>
         </div>
         <div class="card" style="grid-column:span 12">
-          <div class="label">Capabilities</div>
-          <h2 class="section-title">API metadata</h2>
+          <div class="label">Можливості</div>
+          <h2 class="section-title">Метадані API</h2>
           <pre id="meta-json">Loading...</pre>
         </div>
       </div>
     </section>
 
-    <div class="footer">Netco Explorer - projection-only UI - no live provider probing from user requests.</div>
+    <div class="footer">Netco Explorer - інтерфейс лише для читання проєкцій, без живих перевірок провайдерів із запитів користувача.</div>
   </main>
 
   <script>
@@ -328,19 +328,54 @@ export function explorerPage(): Response {
     }
 
     function shortId(value) {
-      if (!value) return "not available";
+      if (!value) return "недоступно";
       const text = String(value);
       return text.length > 22 ? text.slice(0, 10) + "…" + text.slice(-8) : text;
     }
 
     function formatTime(value) {
-      if (!value) return "unknown";
+      if (!value) return "невідомо";
       const date = new Date(value);
       return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleString("uk-UA");
     }
 
     function technologies(value) {
       return Array.isArray(value) ? value : [];
+    }
+
+    function ukPlural(count, one, few, many) {
+      const value = Math.abs(Number(count) || 0);
+      const mod100 = value % 100;
+      const mod10 = value % 10;
+      if (mod100 >= 11 && mod100 <= 19) return many;
+      if (mod10 === 1) return one;
+      if (mod10 >= 2 && mod10 <= 4) return few;
+      return many;
+    }
+
+    function translateFreshness(value) {
+      return {
+        fresh: "свіжі",
+        stale: "застарілі",
+        unknown: "невідомі",
+      }[String(value)] || String(value || "невідомі");
+    }
+
+    function translateAvailability(value) {
+      return {
+        orderable: "можна підключити",
+        service_available: "послуга доступна",
+        unavailable: "недоступно",
+        needs_verification: "потребує перевірки",
+        unknown: "невідомо",
+      }[String(value)] || String(value || "невідомо");
+    }
+
+    function translateSourceKind(value) {
+      return {
+        official_website: "офіційний сайт",
+        approved_geocoder: "схвалений геокодер",
+      }[String(value)] || String(value || "невідомий тип");
     }
 
     function activateTab(name) {
@@ -350,8 +385,8 @@ export function explorerPage(): Response {
       if (name === "map-view") {
         ensureMap().catch((error) => {
           document.getElementById("map-inspector").innerHTML =
-            '<div class="map-empty">Map failed: ' +
-            escapeHtml(error instanceof Error ? error.message : "unknown error") +
+            '<div class="map-empty">Помилка карти: ' +
+            escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
             '</div>';
         });
       }
@@ -372,8 +407,8 @@ export function explorerPage(): Response {
       state.providers = providers.body?.providers ?? [];
       state.sources = sources.body?.sources ?? [];
 
-      document.getElementById("metric-system").textContent = status.ok && status.body?.ready ? "Healthy" : "Degraded";
-      document.getElementById("metric-system-note").textContent = status.body?.database?.coverage_schema_ready ? "coverage schema ready" : "check system tab";
+      document.getElementById("metric-system").textContent = status.ok && status.body?.ready ? "Працює" : "Проблема";
+      document.getElementById("metric-system-note").textContent = status.body?.database?.coverage_schema_ready ? "схема покриття готова" : "див. вкладку «Система»";
       document.getElementById("metric-providers").textContent = String(state.providers.length);
       document.getElementById("metric-sources").textContent = String(state.sources.length);
       document.getElementById("metric-stage").textContent =
@@ -387,22 +422,22 @@ export function explorerPage(): Response {
             return '<div class="item"><div class="row"><div><div class="item-title">' +
               escapeHtml(provider.display_name || provider.slug) +
               '</div><div class="item-meta">' +
-              escapeHtml(provider.slug) + ' · observed ' + escapeHtml(formatTime(provider.last_observed_at)) +
-              '</div></div><span class="pill">' + tech.length + ' technologies</span></div>' +
+              escapeHtml(provider.slug) + ' · спостережено ' + escapeHtml(formatTime(provider.last_observed_at)) +
+              '</div></div><span class="pill">' + tech.length + ' технологій</span></div>' +
               (tech.length ? '<div class="techs">' + tech.map((t) => '<span class="tech">' + escapeHtml(t) + '</span>').join("") + '</div>' : '') +
               '</div>';
           }).join("")
-        : '<div class="empty">No canonical provider projections yet.</div>';
+        : '<div class="empty">Канонічних проєкцій провайдерів поки немає.</div>';
 
       document.getElementById("sources-list").innerHTML = state.sources.length
         ? state.sources.map((source) =>
             '<div class="item"><div class="row"><div><div class="item-title">' +
             escapeHtml(source.name || source.slug) +
             '</div><div class="item-meta">' +
-            escapeHtml(source.kind) + ' · ' + escapeHtml(source.provider_slug || "unscoped") +
+            escapeHtml(translateSourceKind(source.kind)) + ' · ' + escapeHtml(source.provider_slug || "без прив’язки") +
             '</div></div><span class="pill">' + escapeHtml(source.slug) + '</span></div></div>'
           ).join("")
-        : '<div class="empty">No registered sources.</div>';
+        : '<div class="empty">Зареєстрованих джерел поки немає.</div>';
     }
 
     function renderEvidence(availability, interaction) {
@@ -414,10 +449,10 @@ export function explorerPage(): Response {
       state.evidence = { snapshot, observation, claim, projection };
 
       document.getElementById("evidence-trail").innerHTML =
-        '<div class="trail-step"><div class="trail-num">01</div><div class="trail-name">Snapshot</div><div class="trail-id">' + escapeHtml(snapshot || "persisted, id unavailable here") + '</div></div>' +
-        '<div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Observation</div><div class="trail-id">' + escapeHtml(observation || "persisted, id unavailable here") + '</div></div>' +
-        '<div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Claim</div><div class="trail-id">' + escapeHtml(claim || "no claim") + '</div></div>' +
-        '<div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Projection</div><div class="trail-id">' + escapeHtml(projection || "no projection") + '</div></div>';
+        '<div class="trail-step"><div class="trail-num">01</div><div class="trail-name">Знімок</div><div class="trail-id">' + escapeHtml(snapshot || "збережено, ID тут недоступний") + '</div></div>' +
+        '<div class="trail-step"><div class="trail-num">02</div><div class="trail-name">Спостереження</div><div class="trail-id">' + escapeHtml(observation || "збережено, ID тут недоступний") + '</div></div>' +
+        '<div class="trail-step"><div class="trail-num">03</div><div class="trail-name">Твердження</div><div class="trail-id">' + escapeHtml(claim || "твердження немає") + '</div></div>' +
+        '<div class="trail-step"><div class="trail-num">04</div><div class="trail-name">Проєкція</div><div class="trail-id">' + escapeHtml(projection || "проєкції немає") + '</div></div>';
     }
 
     function optionalNumberParam(params, name) {
@@ -480,8 +515,10 @@ export function explorerPage(): Response {
       const source = state.map.getSource("netco-h3");
       if (source) source.setData(data);
 
+      const cellCount = Number(data?.count ?? 0);
       document.getElementById("map-cell-count").textContent =
-        String(data?.count ?? 0) + ((data?.count ?? 0) === 1 ? " cell" : " cells");
+        String(cellCount) + " " +
+        ukPlural(cellCount, "комірка", "комірки", "комірок");
     }
 
     function mapTechnologies(value) {
@@ -521,20 +558,20 @@ export function explorerPage(): Response {
       const technologies = mapTechnologies(properties.technologies);
 
       document.getElementById("map-inspector").innerHTML =
-        '<div class="map-stat"><div class="label">H3 cell</div><strong>' +
+        '<div class="map-stat"><div class="label">H3-комірка</div><strong>' +
         escapeHtml(properties.h3_index || "unknown") +
         '</strong></div>' +
-        '<div class="map-stat"><div class="label">Addresses</div><strong>' +
+        '<div class="map-stat"><div class="label">Адреси</div><strong>' +
         escapeHtml(properties.address_count ?? 0) +
         '</strong></div>' +
-        '<div class="map-stat"><div class="label">Providers</div><strong>' +
+        '<div class="map-stat"><div class="label">Провайдери</div><strong>' +
         escapeHtml(properties.provider_count ?? 0) +
         '</strong></div>' +
-        '<div class="map-stat"><div class="label">Availability</div><strong>' +
+        '<div class="map-stat"><div class="label">Записи доступності</div><strong>' +
         escapeHtml(properties.availability_count ?? 0) +
         '</strong></div>' +
-        '<div class="map-stat"><div class="label">Technologies</div><strong>' +
-        escapeHtml(technologies.join(", ") || "none") +
+        '<div class="map-stat"><div class="label">Технології</div><strong>' +
+        escapeHtml(technologies.join(", ") || "немає") +
         '</strong></div>' +
         detailHtml;
     }
@@ -543,7 +580,7 @@ export function explorerPage(): Response {
       const h3Index = String(properties.h3_index || "");
       renderCellSummary(
         properties,
-        '<div class="map-detail"><div class="empty">Loading persisted addresses…</div></div>',
+        '<div class="map-detail"><div class="empty">Завантаження збережених адрес…</div></div>',
       );
 
       const response = await getJson(
@@ -553,7 +590,7 @@ export function explorerPage(): Response {
       if (!response.ok) {
         renderCellSummary(
           properties,
-          '<div class="map-detail"><div class="empty">Cell detail failed: ' +
+          '<div class="map-detail"><div class="empty">Не вдалося завантажити дані комірки: ' +
             escapeHtml(response.body?.error || "unknown_error") +
             '</div></div>',
         );
@@ -577,28 +614,28 @@ export function explorerPage(): Response {
             return '<div class="map-address"><div><div class="map-address-title">' +
               escapeHtml(label || item.normalized_key || item.address_id) +
               '</div><div class="map-address-meta">' +
-              escapeHtml(item.freshness_state || "unknown") + ' · ' +
-              escapeHtml(item.provider_count ?? 0) + ' provider · ' +
-              escapeHtml(item.availability_count ?? 0) + ' availability · ' +
-              escapeHtml((item.technologies || []).join(", ") || "no technology") +
+              escapeHtml(translateFreshness(item.freshness_state)) + ' · ' +
+              escapeHtml(item.provider_count ?? 0) + ' провайдер · ' +
+              escapeHtml(item.availability_count ?? 0) + ' записів доступності · ' +
+              escapeHtml((item.technologies || []).join(", ") || "технології не вказані") +
               '</div></div><button class="secondary" data-map-address-index="' +
-              index + '">Inspect evidence</button></div>';
+              index + '">Переглянути докази</button></div>';
           }).join("")
-        : '<div class="empty">No persisted addresses in this cell.</div>';
+        : '<div class="empty">У цій комірці немає збережених адрес.</div>';
 
       renderCellSummary(
         properties,
-        '<div class="map-detail"><div><div class="label">Addresses in cell</div>' +
+        '<div class="map-detail"><div><div class="label">Адреси в комірці</div>' +
           '<div class="map-addresses">' + addressRows + '</div></div>' +
-          '<div id="map-address-detail" class="map-address-detail muted">Select an address to inspect coverage and provenance.</div></div>',
+          '<div id="map-address-detail" class="map-address-detail muted">Оберіть адресу, щоб переглянути покриття та походження даних.</div></div>',
       );
 
       document.querySelectorAll("[data-map-address-index]").forEach((button) => {
         button.addEventListener("click", () => {
           inspectMapAddress(Number(button.dataset.mapAddressIndex)).catch((error) => {
             document.getElementById("map-address-detail").innerHTML =
-              '<div class="empty">Address inspection failed: ' +
-              escapeHtml(error instanceof Error ? error.message : "unknown error") +
+              '<div class="empty">Не вдалося перевірити адресу: ' +
+              escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
               '</div>';
           });
         });
@@ -636,23 +673,23 @@ export function explorerPage(): Response {
             return '<div class="item"><div class="item-title">' +
               escapeHtml(provider.display_name || provider.slug || provider.provider_id) +
               '</div><div class="item-meta">' +
-              escapeHtml(technologyLabels || "technology unknown") +
-              ' · persisted coverage projection</div></div>';
+              escapeHtml(technologyLabels || "технологія невідома") +
+              ' · збережена проєкція покриття</div></div>';
           }).join("")
-        : '<div class="empty">No persisted provider coverage for this address.</div>';
+        : '<div class="empty">Для цієї адреси немає збережених даних про покриття провайдерів.</div>';
 
       const source = provenance.ok ? provenance.body?.source : null;
       const claim = provenance.ok ? provenance.body?.claim : null;
 
       document.getElementById("map-address-detail").innerHTML =
-        '<div class="label">Address evidence</div>' +
+        '<div class="label">Докази для адреси</div>' +
         '<div class="item-title">' +
         escapeHtml([address.city, address.street, address.house_number].filter(Boolean).join(", ")) +
         '</div><div class="item-meta">address ' +
         escapeHtml(shortId(item.address_id)) +
-        ' · geo source ' +
-        escapeHtml(source?.name || "not available") +
-        ' · observed ' +
+        ' · геоджерело ' +
+        escapeHtml(source?.name || "недоступно") +
+        ' · спостережено ' +
         escapeHtml(formatTime(claim?.observed_at)) +
         '</div><div class="list">' + providerHtml + '</div>';
     }
@@ -735,8 +772,8 @@ export function explorerPage(): Response {
 
           inspectMapCell(feature.properties || {}).catch((error) => {
             document.getElementById("map-inspector").innerHTML =
-              '<div class="map-empty">Cell inspection failed: ' +
-              escapeHtml(error instanceof Error ? error.message : "unknown error") +
+              '<div class="map-empty">Не вдалося відкрити комірку: ' +
+              escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
               '</div>';
           });
         });
@@ -753,11 +790,19 @@ export function explorerPage(): Response {
         await refreshMapData();
       });
 
+      document.getElementById("map-reset-kyiv").addEventListener("click", () => {
+        map.flyTo({
+          center: [30.340224, 50.47843],
+          zoom: 13.5,
+          essential: true,
+        });
+      });
+
       map.on("moveend", () => {
         persistMapState();
         refreshMapData().catch((error) => {
           document.getElementById("map-cell-count").textContent =
-            "query error";
+            "помилка запиту";
           console.error("netco_map_refresh_failed", error);
         });
       });
@@ -771,11 +816,11 @@ export function explorerPage(): Response {
       const results = document.getElementById("results");
 
       if (!country || !city || !street || !house) {
-        results.innerHTML = '<div class="empty">Заповни country, city, street та house.</div>';
+        results.innerHTML = '<div class="empty">Заповни код країни, місто, вулицю та номер будинку.</div>';
         return;
       }
 
-      results.innerHTML = '<div class="empty">Reading persisted projections...</div>';
+      results.innerHTML = '<div class="empty">Читаю збережені проєкції…</div>';
 
       const params = new URLSearchParams({
         country_code: country,
@@ -790,7 +835,7 @@ export function explorerPage(): Response {
 
       if (!response.ok) {
         results.innerHTML =
-          '<div class="provider-result"><div class="provider-title">Coverage read failed</div><div class="muted">' +
+          '<div class="provider-result"><div class="provider-title">Не вдалося прочитати покриття</div><div class="muted">' +
           escapeHtml(response.body?.error || "unknown_error") +
           '</div></div>';
         renderEvidence([], null);
@@ -803,7 +848,7 @@ export function explorerPage(): Response {
 
       if (!providers.length) {
         results.innerHTML =
-          '<div class="provider-result"><div class="provider-title">No persisted coverage evidence</div><div class="muted">Це означає "Netco ще не знає", а не "підключення недоступне".</div></div>';
+          '<div class="provider-result"><div class="provider-title">Збережених доказів покриття немає</div><div class="muted">Це означає "Netco ще не знає", а не "підключення недоступне".</div></div>';
         renderEvidence([], null);
         return;
       }
@@ -820,19 +865,19 @@ export function explorerPage(): Response {
           escapeHtml(address?.city || city) + ', ' +
           escapeHtml(address?.street || street) + ' ' +
           escapeHtml(address?.house_number || house) +
-          '</div></div><span class="pill good">persisted evidence</span></div>' +
+          '</div></div><span class="pill good">збережені докази</span></div>' +
           '<div class="techs">' +
           availability.map((item) =>
             '<span class="tech"><strong>' +
             escapeHtml(String(item.technology || "unknown").toUpperCase()) +
-            '</strong> · ' + escapeHtml(item.availability_state || "unknown") +
+            '</strong> · ' + escapeHtml(translateAvailability(item.availability_state)) +
             '<br><span class="muted">' +
             escapeHtml(formatTime(item.observed_at)) +
             '</span></span>'
           ).join("") +
           '</div><div class="item-meta" style="margin-top:12px">claim ' +
           escapeHtml(shortId(availability[0]?.supporting_claim_id)) +
-          ' · fresh until ' +
+          ' · актуально до ' +
           escapeHtml(formatTime(availability[0]?.fresh_until)) +
           '</div></div>';
       }).join("");
@@ -861,8 +906,8 @@ export function explorerPage(): Response {
     });
 
     loadDashboard().catch((error) => {
-      document.getElementById("metric-system").textContent = "Error";
-      document.getElementById("metric-system-note").textContent = error instanceof Error ? error.message : "dashboard load failed";
+      document.getElementById("metric-system").textContent = "Помилка";
+      document.getElementById("metric-system-note").textContent = error instanceof Error ? error.message : "не вдалося завантажити панель";
     });
   </script>
 </body>
@@ -874,7 +919,7 @@ export function explorerPage(): Response {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       "content-security-policy":
-        "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://unpkg.com https://tiles.openfreemap.org; img-src 'self' data: blob: https://tiles.openfreemap.org; worker-src blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' https://unpkg.com https://tiles.openfreemap.org; img-src 'self' data: blob: https://tiles.openfreemap.org; worker-src blob: https://unpkg.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
     },
