@@ -1,0 +1,46 @@
+name: Map Default Viewport Production Proof
+
+on:
+  push:
+    branches:
+      - test/map-default-viewport-production
+    paths:
+      - ".github/workflows/map-default-viewport-production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify default viewport fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.sergii-ponomarov.workers.dev"
+          html="$(curl -fsS "$base/")"
+
+          grep -q 'function optionalNumberParam(params, name)' <<<"$html"
+          grep -q 'lng ?? 30.340224' <<<"$html"
+          grep -q 'lat ?? 50.47843' <<<"$html"
+          grep -q 'zoom === null' <<<"$html"
+
+          if grep -q 'const lng = Number(params.get("lng"))' <<<"$html"; then
+            echo "old null-to-zero bug is still deployed" >&2
+            exit 1
+          fi
+
+          cells="$(curl -fsS --get             --data-urlencode "resolution=9"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base/api/v1/geo/h3-cells")"
+
+          CELLS="$cells" node --input-type=module <<'NODE'
+          const cells = JSON.parse(process.env.CELLS);
+          if (cells.count !== 1) throw new Error("expected one Kyiv H3 cell");
+          console.log(JSON.stringify({
+            default_center: [30.340224, 50.47843],
+            default_zoom: 13.5,
+            h3_cell: cells.features?.[0]?.id,
+            count: cells.count,
+          }, null, 2));
+          NODE
