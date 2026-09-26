@@ -179,6 +179,7 @@ export default {
             "/api/v1/coverage/address",
             "/api/v1/coverage/addresses",
             "/api/v1/geo/coverage-points",
+            "/api/v1/geo/h3-cells",
             "/api/v1/geo/enrichment-backlog",
             "/api/v1/geo/addresses/:address_id/provenance",
             "/api/v1/coverage/lanet/checker-interface",
