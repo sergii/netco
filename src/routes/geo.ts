@@ -2,7 +2,10 @@ import {
   getAddressGeoEvidence,
   listCoveragePoints,
   listGeoEnrichmentBacklog,
+  listH3CoverageCells,
   type CoveragePointsQuery,
+  type H3CellsQuery,
+  type ViewportQuery,
 } from "../application/geo";
 import type { CapabilityFailure } from "../application/result";
 
@@ -24,6 +27,7 @@ function failureResult(
       : failure.code === "coverage_schema_unavailable"
         ? 503
         : failure.code.startsWith("viewport_") ||
+            failure.code.startsWith("h3_") ||
             failure.code === "geometry_filter_invalid"
           ? 400
           : 500;
@@ -37,9 +41,9 @@ function failureResult(
   };
 }
 
-function coveragePointsQuery(url: URL): CoveragePointsQuery {
+function viewportQuery(url: URL): ViewportQuery["viewport"] {
   const viewportNames = ["west", "south", "east", "north"] as const;
-  const viewport: NonNullable<CoveragePointsQuery["viewport"]> = {};
+  const viewport: NonNullable<ViewportQuery["viewport"]> = {};
   let hasViewport = false;
 
   for (const name of viewportNames) {
@@ -50,9 +54,22 @@ function coveragePointsQuery(url: URL): CoveragePointsQuery {
     }
   }
 
+  return hasViewport ? viewport : null;
+}
+
+function coveragePointsQuery(url: URL): CoveragePointsQuery {
   return {
     geometry: url.searchParams.get("geometry"),
-    viewport: hasViewport ? viewport : null,
+    viewport: viewportQuery(url),
+  };
+}
+
+function h3CellsQuery(url: URL): H3CellsQuery {
+  const resolution = url.searchParams.get("resolution");
+
+  return {
+    resolution: resolution === null ? null : Number(resolution),
+    viewport: viewportQuery(url),
   };
 }
 
@@ -72,11 +89,14 @@ export async function geoRoute(
 
   const coveragePoints =
     url.pathname === "/api/v1/geo/coverage-points";
+  const h3Cells =
+    url.pathname === "/api/v1/geo/h3-cells";
   const enrichmentBacklog =
     url.pathname === "/api/v1/geo/enrichment-backlog";
 
   if (
     !coveragePoints &&
+    !h3Cells &&
     !enrichmentBacklog &&
     !provenanceMatch
   ) {
@@ -103,6 +123,17 @@ export async function geoRoute(
 
   if (enrichmentBacklog) {
     const result = await listGeoEnrichmentBacklog(env.DATABASE);
+
+    return result.ok
+      ? { status: 200, body: result.value }
+      : failureResult(result);
+  }
+
+  if (h3Cells) {
+    const result = await listH3CoverageCells(
+      env.DATABASE,
+      h3CellsQuery(url),
+    );
 
     return result.ok
       ? { status: 200, body: result.value }
