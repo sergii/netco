@@ -1,0 +1,55 @@
+name: Map Levels Production Proof
+
+on:
+  push:
+    branches:
+      - test/map-levels-production-proof
+    paths:
+      - ".github/workflows/map-levels-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify hierarchical map levels and overlay drawer
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.sergii-ponomarov.workers.dev"
+          html="$(curl -fsS "$base/")"
+
+          grep -q 'data-map-level="districts"' <<<"$html"
+          grep -q 'data-map-level="zones"' <<<"$html"
+          grep -q 'data-map-level="buildings"' <<<"$html"
+          grep -q '>Райони</button>' <<<"$html"
+          grep -q '>Зони H3</button>' <<<"$html"
+          grep -q '>Будинки</button>' <<<"$html"
+          grep -q 'id="map-drawer"' <<<"$html"
+          grep -q 'map-drawer-close' <<<"$html"
+          grep -q 'translateX(-102%)' <<<"$html"
+          grep -q 'closeMapDrawer' <<<"$html"
+          grep -q 'netco-buildings' <<<"$html"
+
+          zones="$(curl -fsS --get             --data-urlencode "resolution=9"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base/api/v1/geo/h3-cells")"
+
+          buildings="$(curl -fsS --get             --data-urlencode "geometry=present"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base/api/v1/geo/coverage-points")"
+
+          ZONES="$zones" BUILDINGS="$buildings" node --input-type=module <<'NODE'
+          const zones = JSON.parse(process.env.ZONES);
+          const buildings = JSON.parse(process.env.BUILDINGS);
+
+          if (zones.count !== 1) throw new Error("expected one H3 zone");
+          if (buildings.count !== 1) throw new Error("expected one building point");
+
+          console.log(JSON.stringify({
+            levels: ["districts", "zones", "buildings"],
+            active_levels: ["zones", "buildings"],
+            h3_zone: zones.features?.[0]?.id,
+            building: buildings.features?.[0]?.properties?.address_id,
+            overlay_drawer: true,
+          }, null, 2));
+          NODE
