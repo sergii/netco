@@ -9,11 +9,32 @@ export interface CoverageViewport {
   north: number;
 }
 
-export async function getCoveragePointFeatureCollection(
+export interface CoveragePointRecord {
+  address_id: string;
+  country_code: string;
+  region: string | null;
+  city: string;
+  district: string | null;
+  street: string;
+  house_number: string;
+  corpus: string | null;
+  building_letter: string | null;
+  postal_code: string | null;
+  normalized_key: string;
+  latitude: number | null;
+  longitude: number | null;
+  provider_ids: string[];
+  provider_count: number;
+  availability_count: number;
+  technologies: string[];
+  latest_observed_at: string;
+  has_fresh: boolean;
+}
+
+export async function getCoveragePointRecords(
   database: Hyperdrive,
-  geometryFilter: CoverageGeometryFilter = "all",
   viewport: CoverageViewport | null = null,
-): Promise<Record<string, unknown>> {
+): Promise<CoveragePointRecord[]> {
   return withPostgresClient(database, async (client) => {
     const result = await client.query<{
       address_id: string;
@@ -29,6 +50,7 @@ export async function getCoveragePointFeatureCollection(
       normalized_key: string;
       latitude: string | number | null;
       longitude: string | number | null;
+      provider_ids: string[];
       provider_count: string | number;
       availability_count: string | number;
       technologies: string[];
@@ -50,6 +72,8 @@ export async function getCoveragePointFeatureCollection(
           a.normalized_key,
           a.latitude,
           a.longitude,
+          array_agg(DISTINCT paa.provider_id::text ORDER BY paa.provider_id::text)
+            AS provider_ids,
           count(DISTINCT paa.provider_id) AS provider_count,
           count(*) AS availability_count,
           array_agg(DISTINCT paa.technology ORDER BY paa.technology)
@@ -103,72 +127,96 @@ export async function getCoveragePointFeatureCollection(
       ],
     );
 
-    const features = result.rows
-      .map((row) => {
-        const latitude =
-          row.latitude === null ? null : Number(row.latitude);
-        const longitude =
-          row.longitude === null ? null : Number(row.longitude);
-        const hasGeometry =
-          latitude !== null &&
-          longitude !== null &&
-          Number.isFinite(latitude) &&
-          Number.isFinite(longitude);
-
-        return {
-          type: "Feature" as const,
-          id: row.address_id,
-          geometry: hasGeometry
-            ? {
-                type: "Point" as const,
-                coordinates: [longitude, latitude],
-              }
-            : null,
-          properties: {
-            address_id: row.address_id,
-            normalized_key: row.normalized_key,
-            country_code: row.country_code,
-            region: row.region,
-            city: row.city,
-            district: row.district,
-            street: row.street,
-            house_number: row.house_number,
-            corpus: row.corpus,
-            building_letter: row.building_letter,
-            postal_code: row.postal_code,
-            geometry_state: hasGeometry ? "present" : "missing",
-            freshness_state: row.has_fresh ? "fresh" : "stale",
-            provider_count: Number(row.provider_count),
-            availability_count: Number(row.availability_count),
-            technologies: row.technologies,
-            latest_observed_at: new Date(
-              row.latest_observed_at,
-            ).toISOString(),
-          },
-        };
-      })
-      .filter((feature) => {
-        if (geometryFilter === "all") return true;
-
-        return geometryFilter === "present"
-          ? feature.geometry !== null
-          : feature.geometry === null;
-      });
-
-    const geocodedCount = features.filter(
-      (feature) => feature.geometry !== null,
-    ).length;
-
-    return {
-      type: "FeatureCollection",
-      geometry_filter: geometryFilter,
-      viewport,
-      count: features.length,
-      summary: {
-        geometry_present: geocodedCount,
-        geometry_missing: features.length - geocodedCount,
-      },
-      features,
-    };
+    return result.rows.map((row) => ({
+      address_id: row.address_id,
+      country_code: row.country_code,
+      region: row.region,
+      city: row.city,
+      district: row.district,
+      street: row.street,
+      house_number: row.house_number,
+      corpus: row.corpus,
+      building_letter: row.building_letter,
+      postal_code: row.postal_code,
+      normalized_key: row.normalized_key,
+      latitude: row.latitude === null ? null : Number(row.latitude),
+      longitude: row.longitude === null ? null : Number(row.longitude),
+      provider_ids: row.provider_ids,
+      provider_count: Number(row.provider_count),
+      availability_count: Number(row.availability_count),
+      technologies: row.technologies,
+      latest_observed_at: new Date(row.latest_observed_at).toISOString(),
+      has_fresh: row.has_fresh,
+    }));
   });
+}
+
+export async function getCoveragePointFeatureCollection(
+  database: Hyperdrive,
+  geometryFilter: CoverageGeometryFilter = "all",
+  viewport: CoverageViewport | null = null,
+): Promise<Record<string, unknown>> {
+  const records = await getCoveragePointRecords(database, viewport);
+
+  const features = records
+    .map((row) => {
+      const hasGeometry =
+        row.latitude !== null &&
+        row.longitude !== null &&
+        Number.isFinite(row.latitude) &&
+        Number.isFinite(row.longitude);
+
+      return {
+        type: "Feature" as const,
+        id: row.address_id,
+        geometry: hasGeometry
+          ? {
+              type: "Point" as const,
+              coordinates: [row.longitude, row.latitude],
+            }
+          : null,
+        properties: {
+          address_id: row.address_id,
+          normalized_key: row.normalized_key,
+          country_code: row.country_code,
+          region: row.region,
+          city: row.city,
+          district: row.district,
+          street: row.street,
+          house_number: row.house_number,
+          corpus: row.corpus,
+          building_letter: row.building_letter,
+          postal_code: row.postal_code,
+          geometry_state: hasGeometry ? "present" : "missing",
+          freshness_state: row.has_fresh ? "fresh" : "stale",
+          provider_count: row.provider_count,
+          availability_count: row.availability_count,
+          technologies: row.technologies,
+          latest_observed_at: row.latest_observed_at,
+        },
+      };
+    })
+    .filter((feature) => {
+      if (geometryFilter === "all") return true;
+
+      return geometryFilter === "present"
+        ? feature.geometry !== null
+        : feature.geometry === null;
+    });
+
+  const geocodedCount = features.filter(
+    (feature) => feature.geometry !== null,
+  ).length;
+
+  return {
+    type: "FeatureCollection",
+    geometry_filter: geometryFilter,
+    viewport,
+    count: features.length,
+    summary: {
+      geometry_present: geocodedCount,
+      geometry_missing: features.length - geocodedCount,
+    },
+    features,
+  };
 }
