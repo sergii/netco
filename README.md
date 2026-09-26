@@ -34,6 +34,7 @@ The initial focus is Kyiv, Ukraine. The architecture is intentionally designed f
 - [RFC 0013 - Geo Readiness, Enrichment Backlog, and Trusted Point Materialization](docs/rfcs/0013-geo-readiness-enrichment-materialization.md)
 - [RFC 0014 - First Trusted Coordinate Source](docs/rfcs/0014-first-trusted-coordinate-source.md)
 - [RFC 0015 - Viewport-Bounded Coverage Point Reads](docs/rfcs/0015-viewport-bounded-coverage-points.md)
+- [RFC 0024 - First MapLibre Coverage Map](docs/rfcs/0024-first-maplibre-coverage-map.md)
 - [Kyiv Bootstrap Research](docs/research/kyiv-bootstrap.md)
 
 ## Structured contracts
