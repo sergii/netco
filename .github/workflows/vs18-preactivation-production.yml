@@ -1,0 +1,75 @@
+name: VS18 Preactivation Production Proof
+
+on:
+  push:
+    branches:
+      - test/vs18-preactivation-production
+    paths:
+      - ".github/workflows/vs18-preactivation-production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify safe preactivation state
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.web33.workers.dev"
+          address_id="d1cdbb61-98c7-4045-b70a-21ed4b4e6dca"
+
+          workspace_status="$(curl -sS -o /tmp/workspace.json -w '%{http_code}'             "$base/api/v1/operator/addresses/$address_id")"
+
+          activity_status="$(curl -sS -o /tmp/activity.json -w '%{http_code}'             "$base/api/v1/operator/addresses/$address_id/activity")"
+
+          note_status="$(curl -sS -o /tmp/note.json -w '%{http_code}'             -X POST             -H 'content-type: application/json'             --data '{"body":"must remain blocked"}'             "$base/api/v1/operator/addresses/$address_id/notes")"
+
+          openapi="$(curl -fsS "$base/openapi.json")"
+
+          WORKSPACE_STATUS="$workspace_status"           ACTIVITY_STATUS="$activity_status"           NOTE_STATUS="$note_status"           OPENAPI="$openapi"           node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const activity = JSON.parse(fs.readFileSync("/tmp/activity.json","utf8"));
+          const note = JSON.parse(fs.readFileSync("/tmp/note.json","utf8"));
+          const openapi = JSON.parse(process.env.OPENAPI);
+
+          if (process.env.WORKSPACE_STATUS !== "200") {
+            throw new Error("workspace read regression");
+          }
+          if (process.env.ACTIVITY_STATUS !== "503") {
+            throw new Error("activity should be schema-blocked");
+          }
+          if (activity.error !== "operator_activity_schema_unavailable") {
+            throw new Error("unexpected activity state: " + JSON.stringify(activity));
+          }
+          if (process.env.NOTE_STATUS !== "503") {
+            throw new Error("note write should remain disabled");
+          }
+          if (note.error !== "operator_writes_disabled") {
+            throw new Error("unexpected note write state: " + JSON.stringify(note));
+          }
+
+          const activityPath =
+            "/api/v1/operator/addresses/{address_id}/activity";
+          const notesPath =
+            "/api/v1/operator/addresses/{address_id}/notes";
+          if (!openapi.paths?.[activityPath]?.get) {
+            throw new Error("activity OpenAPI path missing");
+          }
+          if (!openapi.paths?.[notesPath]?.post) {
+            throw new Error("notes OpenAPI path missing");
+          }
+
+          console.log(JSON.stringify({
+            workspace_status: process.env.WORKSPACE_STATUS,
+            activity_status: process.env.ACTIVITY_STATUS,
+            activity_error: activity.error,
+            note_status: process.env.NOTE_STATUS,
+            note_error: note.error,
+            safe_preactivation: true,
+          }, null, 2));
+          NODE
