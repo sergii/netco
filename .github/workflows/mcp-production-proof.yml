@@ -17,7 +17,7 @@ jobs:
     environment: production
     env:
       NETCO_MCP_TOKEN: ${{ secrets.NETCO_MCP_TOKEN }}
-      NETCO_BASE_URL: https://netco.sergii-ponomarov.workers.dev
+      NETCO_BASE_URL: https://netco.web33.workers.dev
 
     steps:
       - name: Checkout
