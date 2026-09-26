@@ -484,6 +484,14 @@ export function explorerPage(): Response {
         <div class="sidebar-product">Netco CRM</div>
       </div>
 
+    <nav class="tabs" aria-label="Розділи Netco Explorer">
+      <button class="tab active" data-tab="overview">Огляд</button>
+      <button class="tab" data-tab="map-view">Карта</button>
+      <button class="tab" data-tab="providers">Провайдери</button>
+      <button class="tab" data-tab="sources">Джерела</button>
+      <button class="tab" data-tab="evidence">Докази</button>
+      <button class="tab" data-tab="system">Система</button>
+    </nav>
       <div class="sidebar-spacer"></div>
       <div class="live"><span class="dot"></span><span id="live-label">Робоче середовище</span></div>
     </aside>
@@ -499,14 +507,7 @@ export function explorerPage(): Response {
 
 
 
-    <nav class="tabs" aria-label="Розділи Netco Explorer">
-      <button class="tab active" data-tab="overview">Огляд</button>
-      <button class="tab" data-tab="map-view">Карта</button>
-      <button class="tab" data-tab="providers">Провайдери</button>
-      <button class="tab" data-tab="sources">Джерела</button>
-      <button class="tab" data-tab="evidence">Докази</button>
-      <button class="tab" data-tab="system">Система</button>
-    </nav>
+
 
     <section id="overview" class="view active">
       <div class="grid">
