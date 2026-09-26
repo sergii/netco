@@ -1,0 +1,66 @@
+name: VS14 Map Production Proof
+
+on:
+  push:
+    branches:
+      - test/vs14-map-production-proof
+    paths:
+      - ".github/workflows/vs14-map-production-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify production map surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.sergii-ponomarov.workers.dev"
+
+          headers="$(mktemp)"
+          html="$(mktemp)"
+          curl -fsS -D "$headers" "$base/" -o "$html"
+
+          grep -q 'data-tab="map-view"' "$html"
+          grep -q 'id="map"' "$html"
+          grep -q 'maplibre-gl@6.11.2' "$html"
+          grep -q '/api/v1/geo/h3-cells' "$html"
+          grep -qi 'tiles.openfreemap.org' "$html"
+          grep -qi 'content-security-policy:.*unpkg.com.*tiles.openfreemap.org' "$headers"
+
+          curl -fsS -I             "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs"             >/dev/null
+
+          curl -fsS             "https://tiles.openfreemap.org/styles/liberty"             >/tmp/openfreemap-style.json
+
+          cells="$(curl -fsS --get             --data-urlencode "resolution=9"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base/api/v1/geo/h3-cells")"
+
+          CELLS="$cells" node --input-type=module <<'NODE'
+          const cells = JSON.parse(process.env.CELLS);
+          if (cells.count !== 1) {
+            throw new Error("expected one production H3 cell");
+          }
+          const feature = cells.features?.[0];
+          if (feature?.geometry?.type !== "Polygon") {
+            throw new Error("expected H3 polygon");
+          }
+          if (feature.properties?.address_count !== 1) {
+            throw new Error("address_count mismatch");
+          }
+          if (feature.properties?.provider_count !== 1) {
+            throw new Error("provider_count mismatch");
+          }
+          if (feature.properties?.availability_count !== 2) {
+            throw new Error("availability_count mismatch");
+          }
+          console.log(JSON.stringify({
+            map_html: true,
+            maplibre: "6.11.2",
+            basemap_style: "openfreemap-liberty",
+            h3_cell: feature.id,
+            properties: feature.properties,
+          }, null, 2));
+          NODE
