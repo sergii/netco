@@ -45,6 +45,9 @@ jobs:
       - name: Validate operator write boundary
         run: node scripts/validate-operator-write-boundary.mjs
 
+      - name: Validate operator activity boundary
+        run: node scripts/validate-operator-activity.mjs
+
       - name: Validate provisioning scripts
         run: bash -n scripts/provision-hyperdrive.sh scripts/rotate-hyperdrive-credentials.sh scripts/migrate-production.sh
 

@@ -1,0 +1,27 @@
+name: VS18 Operator Activity Migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      CONFIRM_OPERATOR_ACTIVITY_MIGRATION: APPLY_VS18_OPERATOR_ACTIVITY
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require Neon credential
+        run: test -n "$NEON_API_KEY"
+      - name: Install Neon CLI
+        run: npm i -g neon@latest
+      - name: Apply VS18 schema
+        run: bash scripts/migrate-operator-activity-production.sh

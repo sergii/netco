@@ -198,6 +198,8 @@ export default {
             "/api/v1/geo/enrichment-backlog",
             "/api/v1/geo/addresses/:address_id/provenance",
             "/api/v1/operator/addresses/:address_id",
+            "/api/v1/operator/addresses/:address_id/activity",
+            "/api/v1/operator/addresses/:address_id/notes",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",

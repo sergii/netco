@@ -28,6 +28,9 @@
     },
     {
       "name": "Geo"
+    },
+    {
+      "name": "Operator"
     }
   ],
   "paths": {
@@ -746,6 +749,108 @@
           },
           "503": {
             "description": "Database binding or coverage schema unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/operator/addresses/{address_id}/activity": {
+      "get": {
+        "tags": [
+          "Operator"
+        ],
+        "summary": "Read append-only operator activity for an address",
+        "parameters": [
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newest-first operator activity"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/operator/addresses/{address_id}/notes": {
+      "post": {
+        "tags": [
+          "Operator"
+        ],
+        "summary": "Append an operator note to an address",
+        "description": "Write is fail-closed behind the VS17 Cloudflare Access boundary. Production remains disabled until Access and migration activation are proven.",
+        "parameters": [
+          {
+            "name": "address_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Note appended as an activity event"
+          },
+          "400": {
+            "$ref": "#/components/responses/JsonBadRequest"
+          },
+          "403": {
+            "description": "Cloudflare Access identity required"
+          },
+          "404": {
+            "$ref": "#/components/responses/JsonNotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/JsonUnavailable"
           }
         }
       }
