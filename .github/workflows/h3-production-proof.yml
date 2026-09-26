@@ -1,0 +1,34 @@
+name: H3 Production Proof
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/h3-production-proof.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: netco-h3-production-proof
+  cancel-in-progress: false
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NETCO_BASE_URL: https://netco.sergii-ponomarov.workers.dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate persisted-data H3 boundary
+        run: node scripts/validate-h3-read-boundary.mjs
+
+      - name: Run VS13 production proof
+        shell: bash
+        run: bash scripts/acceptance/h3-production-proof.sh
