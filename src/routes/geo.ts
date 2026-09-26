@@ -82,7 +82,7 @@ export async function geoRoute(
   const url = new URL(request.url);
   const h3CellMatch =
     request.method === "GET"
-      ? url.pathname.match(/^\/api\/v1\/geo\/h3-cells\/([0-9a-f]+)$/)
+      ? url.pathname.match(/^\/api\/v1\/geo\/h3-cells\/([^/]+)$/)
       : null;
   const provenanceMatch =
     request.method === "GET"
