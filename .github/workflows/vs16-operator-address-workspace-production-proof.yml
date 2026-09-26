@@ -1,12 +1,6 @@
 name: VS16 Operator Address Workspace Production Proof
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "scripts/acceptance/vs16-operator-address-workspace-production-proof.sh"
-      - ".github/workflows/vs16-operator-address-workspace-production-proof.yml"
   workflow_dispatch:
 
 permissions:
