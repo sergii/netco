@@ -1,7 +1,7 @@
 # RFC 0028 - Fail-Closed Operator Write Boundary
 
 Date: 2026-09-26
-Status: Implementation slice
+Status: Production proven
 
 Issue: #111
 
@@ -144,3 +144,37 @@ operator
 ```
 
 No update/delete endpoint is required for the first slice.
+
+
+## Production acceptance
+
+Production URL:
+
+```text
+https://netco.web33.workers.dev
+```
+
+Verified behavior:
+
+```text
+GET /api/v1/operator/addresses/d1cdbb61-98c7-4045-b70a-21ed4b4e6dca
+  -> HTTP 200
+
+POST /api/v1/operator/addresses/d1cdbb61-98c7-4045-b70a-21ed4b4e6dca/notes
+  -> HTTP 503
+  -> operator_writes_disabled
+```
+
+Service metadata reports:
+
+```json
+{
+  "operator_writes": {
+    "enabled": false,
+    "mode": "fail_closed",
+    "boundary": "cloudflare_access"
+  }
+}
+```
+
+This proves the write namespace is fail-closed before any CRM mutation is introduced.
