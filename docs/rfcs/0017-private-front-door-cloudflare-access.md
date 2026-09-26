@@ -10,7 +10,7 @@ Netco is currently an internal/private product. The OpenAPI and Scalar work prov
 The production Worker is currently reachable through:
 
 ```text
-https://netco.sergii-ponomarov.workers.dev
+https://netco.web33.workers.dev
 ```
 
 The application layer introduced in RFC-0016 is now transport-independent, so restricting the public HTTP front door does not change the domain/application architecture.
