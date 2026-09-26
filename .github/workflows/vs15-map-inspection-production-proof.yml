@@ -1,12 +1,7 @@
 name: VS15 Map Inspection Production Proof
 
 on:
-  push:
-    branches:
-      - proof/vs15-h3-production
-    paths:
-      - ".github/workflows/vs15-map-inspection-production-proof.yml"
-      - "scripts/acceptance/vs15-map-inspection-production-proof.sh"
+  workflow_dispatch:
 
 permissions:
   contents: read
