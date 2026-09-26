@@ -48,7 +48,7 @@ export function getServiceMeta(bindings: RuntimeBindingState) {
   return {
     service: "netco",
     version: "0.1.0",
-    stage: "map-cell-inspection-vs15",
+    stage: "operator-address-workspace-vs16",
     capabilities: {
       evidence: evidence.ready,
       snapshots: evidence.bindings.snapshots,
@@ -72,6 +72,7 @@ export function getServiceMeta(bindings: RuntimeBindingState) {
       h3_aggregation: true,
       map: true,
       map_cell_inspection: true,
+      operator_address_workspace: true,
       mcp: true,
     },
   };
