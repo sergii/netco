@@ -310,6 +310,92 @@ export function explorerPage(): Response {
       border:1px solid var(--line); border-radius:13px; padding:14px;
       background:#0a0e14;
     }
+    .address-workspace-layout {
+      display:grid;
+      grid-template-columns:minmax(280px,.8fr) minmax(0,2fr);
+      gap:16px;
+      align-items:start;
+    }
+    .address-index {
+      position:sticky;
+      top:0;
+      max-height:calc(100vh - 150px);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .address-filter {
+      width:100%;
+      border:1px solid var(--line);
+      background:#0d1219;
+      color:var(--text);
+      border-radius:11px;
+      padding:10px 12px;
+      outline:none;
+    }
+    .address-filter:focus { border-color:#4c6f96; }
+    .address-inventory {
+      display:grid;
+      gap:8px;
+      overflow:auto;
+      min-height:120px;
+    }
+    .address-row {
+      width:100%;
+      text-align:left;
+      border:1px solid var(--line);
+      background:#0d1219;
+      color:var(--text);
+      border-radius:12px;
+      padding:11px 12px;
+      cursor:pointer;
+    }
+    .address-row:hover,
+    .address-row.active {
+      border-color:#3c765f;
+      background:#101a18;
+    }
+    .address-row-title { font-weight:720; }
+    .address-row-meta { color:var(--muted); font-size:12px; margin-top:3px; }
+    .operator-grid {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      margin-top:14px;
+    }
+    .operator-panel {
+      border:1px solid var(--line);
+      border-radius:13px;
+      padding:14px;
+      background:#0d1219;
+      min-width:0;
+    }
+    .operator-panel.wide { grid-column:1/-1; }
+    .operator-heading {
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+      margin-bottom:12px;
+    }
+    .operator-title { font-size:24px; font-weight:760; letter-spacing:-.03em; }
+    .operator-subtitle { color:var(--muted); margin-top:4px; }
+    .operator-kpis {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:10px;
+      margin:14px 0;
+    }
+    .operator-kpi {
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:11px 12px;
+      background:#0a0e14;
+    }
+    .operator-kpi strong { display:block; margin-top:3px; font-size:18px; }
+    .quality-flags { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+    .row-actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
     .maplibregl-ctrl-attrib {
       background:rgba(10,13,18,.82) !important;
       color:#aeb9c8 !important;
@@ -322,6 +408,10 @@ export function explorerPage(): Response {
       .fields .primary { grid-column:span 2; }
       .trail { grid-template-columns:1fr 1fr; }
       .map-inspector { grid-template-columns:1fr 1fr 1fr; }
+      .address-workspace-layout { grid-template-columns:1fr; }
+      .address-index { position:static; max-height:none; }
+      .address-inventory { max-height:340px; }
+      .operator-kpis { grid-template-columns:1fr 1fr; }
     }
     @media (max-width: 560px) {
       .shell { padding:20px 14px 48px; }
@@ -599,6 +689,7 @@ export function explorerPage(): Response {
     <nav class="tabs" aria-label="Розділи Netco Explorer">
       <button class="tab active" data-tab="overview">Огляд</button>
       <button class="tab" data-tab="map-view">Карта</button>
+      <button class="tab" data-tab="addresses">Адреси</button>
       <button class="tab" data-tab="providers">Провайдери</button>
       <button class="tab" data-tab="sources">Джерела</button>
       <button class="tab" data-tab="evidence">Докази</button>
@@ -685,6 +776,24 @@ export function explorerPage(): Response {
       </div>
     </section>
 
+    <section id="addresses" class="view">
+      <div class="address-workspace-layout">
+        <div class="card address-index">
+          <div>
+            <div class="label">Збережені адреси</div>
+            <h2 class="section-title">Адресний індекс</h2>
+          </div>
+          <input id="address-filter" class="address-filter" placeholder="Вулиця, будинок, район…" aria-label="Фільтр адрес">
+          <div id="address-inventory" class="address-inventory"><div class="empty">Завантаження…</div></div>
+        </div>
+        <div id="address-workspace" class="card">
+          <div class="label">Робоче місце оператора</div>
+          <h2 class="section-title">Оберіть адресу</h2>
+          <div class="empty">Тут з’являться покриття, свіжість, координати, claim IDs, provenance, evidence trail і data-quality flags.</div>
+        </div>
+      </div>
+    </section>
+
     <section id="providers" class="view">
       <div class="card">
         <div class="label">Канонічні проєкції</div>
@@ -738,6 +847,8 @@ export function explorerPage(): Response {
     const state = {
       providers: [],
       sources: [],
+      addressInventory: [],
+      selectedAddressId: null,
       evidence: null,
       map: null,
       maplibregl: null,
@@ -823,6 +934,10 @@ export function explorerPage(): Response {
         title: "Карта",
         subtitle: "Просторовий огляд збереженого покриття та перехід до доказів.",
       },
+      addresses: {
+        title: "Адреси",
+        subtitle: "Стабільне робоче місце оператора навколо однієї збереженої адреси.",
+      },
       providers: {
         title: "Провайдери",
         subtitle: "Канонічні профілі провайдерів, які вже відомі Netco.",
@@ -863,6 +978,11 @@ export function explorerPage(): Response {
         return;
       }
 
+      if (name === "addresses") {
+        renderAddressInventory(
+          document.getElementById("address-filter").value,
+        );
+      }
     }
 
     document.querySelectorAll(".tab").forEach((button) => {
@@ -870,15 +990,17 @@ export function explorerPage(): Response {
     });
 
     async function loadDashboard() {
-      const [status, providers, sources, meta] = await Promise.all([
+      const [status, providers, sources, meta, addressInventory] = await Promise.all([
         getJson("/api/v1/evidence/status"),
         getJson("/api/v1/providers"),
         getJson("/api/v1/sources"),
         getJson("/api/v1/meta"),
+        getJson("/api/v1/coverage/addresses?freshness=all"),
       ]);
 
       state.providers = providers.body?.providers ?? [];
       state.sources = sources.body?.sources ?? [];
+      state.addressInventory = addressInventory.body?.addresses ?? [];
 
       document.getElementById("metric-system").textContent = status.ok && status.body?.ready ? "Працює" : "Проблема";
       document.getElementById("metric-system-note").textContent = status.body?.database?.coverage_schema_ready ? "схема покриття готова" : "див. вкладку «Система»";
@@ -911,7 +1033,216 @@ export function explorerPage(): Response {
             '</div></div><span class="pill">' + escapeHtml(source.slug) + '</span></div></div>'
           ).join("")
         : '<div class="empty">Зареєстрованих джерел поки немає.</div>';
+
+      renderAddressInventory("");
     }
+
+    function addressLabel(address) {
+      return [
+        address?.city,
+        address?.street,
+        address?.house_number,
+        address?.corpus,
+      ].filter(Boolean).join(", ");
+    }
+
+    function renderAddressInventory(filterValue) {
+      const target = document.getElementById("address-inventory");
+      const query = String(filterValue || "").trim().toLocaleLowerCase();
+      const rows = state.addressInventory.filter((item) => {
+        const address = item.address || {};
+        const haystack = [
+          address.city,
+          address.district,
+          address.street,
+          address.house_number,
+          address.corpus,
+          address.normalized_key,
+        ].filter(Boolean).join(" ").toLocaleLowerCase();
+        return !query || haystack.includes(query);
+      });
+
+      target.innerHTML = rows.length
+        ? rows.map((item) => {
+            const address = item.address || {};
+            const active = address.id === state.selectedAddressId ? " active" : "";
+            return '<button class="address-row' + active + '" data-address-id="' +
+              escapeHtml(address.id) + '"><div class="address-row-title">' +
+              escapeHtml(addressLabel(address) || address.normalized_key || address.id) +
+              '</div><div class="address-row-meta">' +
+              escapeHtml(translateFreshness(item.freshness_state)) + ' · ' +
+              escapeHtml(item.provider_count ?? 0) + ' провайдер · ' +
+              escapeHtml((item.technologies || []).join(", ") || "технології не вказані") +
+              '</div></button>';
+          }).join("")
+        : '<div class="empty">Немає адрес, що відповідають фільтру.</div>';
+
+      target.querySelectorAll("[data-address-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          openAddressWorkspace(button.dataset.addressId).catch((error) => {
+            document.getElementById("address-workspace").innerHTML =
+              '<div class="empty">Не вдалося відкрити адресу: ' +
+              escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
+              '</div>';
+          });
+        });
+      });
+    }
+
+    function qualityLabel(flag) {
+      return {
+        geometry_missing: "немає координат",
+        coverage_missing: "немає покриття",
+        coverage_stale: "покриття застаріле",
+        geo_provenance_missing: "немає geo provenance",
+      }[String(flag)] || String(flag);
+    }
+
+    function renderOperatorWorkspace(workspace) {
+      const address = workspace.address || {};
+      const coverage = workspace.coverage || {};
+      const map = workspace.map || {};
+      const providers = Array.isArray(coverage.providers) ? coverage.providers : [];
+      const flags = Array.isArray(workspace.data_quality?.flags)
+        ? workspace.data_quality.flags
+        : [];
+      const coverageEvidence = Array.isArray(workspace.evidence?.coverage)
+        ? workspace.evidence.coverage
+        : [];
+      const geo = workspace.evidence?.geo || null;
+
+      const providersHtml = providers.length
+        ? providers.map((provider) => {
+            const availability = Array.isArray(provider.availability)
+              ? provider.availability
+              : [];
+            const tech = availability
+              .map((entry) => String(entry.technology || "невідомо").toUpperCase())
+              .join(", ");
+            const claims = availability
+              .map((entry) => shortId(entry.supporting_claim_id))
+              .join(", ");
+            return '<div class="item"><div class="row"><div><div class="item-title">' +
+              escapeHtml(provider.display_name || provider.slug || provider.provider_id) +
+              '</div><div class="item-meta">' +
+              escapeHtml(tech || "технологія невідома") + ' · ' +
+              escapeHtml(availability.map((entry) => translateAvailability(entry.availability_state)).join(", ")) +
+              '</div></div><span class="pill">' +
+              escapeHtml(claims || "claim недоступний") +
+              '</span></div></div>';
+          }).join("")
+        : '<div class="empty">Збережених provider availability rows немає.</div>';
+
+      const evidenceHtml = coverageEvidence.length
+        ? coverageEvidence.map((entry) =>
+            '<div class="item"><div class="item-title">' +
+            escapeHtml(entry.source?.name || "Джерело") +
+            '</div><div class="item-meta">claim ' +
+            escapeHtml(shortId(entry.claim?.id)) + ' · observation ' +
+            escapeHtml(shortId(entry.observation?.id)) + ' · snapshot ' +
+            escapeHtml(shortId(entry.snapshot?.id)) + ' · ' +
+            escapeHtml(formatTime(entry.claim?.observed_at)) +
+            '</div></div>'
+          ).join("")
+        : '<div class="empty">Coverage evidence trail недоступний.</div>';
+
+      const geoHtml = geo
+        ? '<div class="item"><div class="item-title">' +
+          escapeHtml(geo.source?.name || "Geo source") +
+          '</div><div class="item-meta">claim ' +
+          escapeHtml(shortId(geo.claim?.id)) + ' · observation ' +
+          escapeHtml(shortId(geo.observation?.id)) + ' · snapshot ' +
+          escapeHtml(shortId(geo.snapshot?.id)) + ' · ' +
+          escapeHtml(formatTime(geo.claim?.observed_at)) +
+          '</div></div>'
+        : '<div class="empty">Geo provenance не знайдено.</div>';
+
+      const mapAction = map.geometry_state === "present"
+        ? '<button class="secondary" id="operator-open-map">Показати на карті</button>'
+        : '';
+
+      document.getElementById("address-workspace").innerHTML =
+        '<div class="operator-heading"><div><div class="label">Робоче місце оператора</div>' +
+        '<div class="operator-title">' +
+        escapeHtml(addressLabel(address) || address.normalized_key || address.id) +
+        '</div><div class="operator-subtitle">address ' +
+        escapeHtml(shortId(address.id)) + ' · ' +
+        escapeHtml(address.district || "район не вказано") +
+        '</div></div>' + mapAction + '</div>' +
+        '<div class="operator-kpis">' +
+        '<div class="operator-kpi"><div class="label">Провайдери</div><strong>' +
+        escapeHtml(coverage.provider_count ?? 0) + '</strong></div>' +
+        '<div class="operator-kpi"><div class="label">Availability</div><strong>' +
+        escapeHtml(coverage.availability_count ?? 0) + '</strong></div>' +
+        '<div class="operator-kpi"><div class="label">Свіжість</div><strong>' +
+        escapeHtml(translateFreshness(coverage.freshness_state)) + '</strong></div>' +
+        '<div class="operator-kpi"><div class="label">Координати</div><strong>' +
+        escapeHtml(map.geometry_state === "present" ? "є" : "немає") +
+        '</strong></div></div>' +
+        '<div class="operator-grid">' +
+        '<div class="operator-panel"><div class="label">Адреса і гео</div><div class="item-title">' +
+        escapeHtml(address.normalized_key || "") +
+        '</div><div class="item-meta">' +
+        escapeHtml(map.latitude ?? "—") + ', ' + escapeHtml(map.longitude ?? "—") +
+        '<br>Останнє coverage observation: ' +
+        escapeHtml(formatTime(coverage.latest_observed_at)) +
+        '</div></div>' +
+        '<div class="operator-panel"><div class="label">Data quality</div><div class="quality-flags">' +
+        (flags.length
+          ? flags.map((flag) => '<span class="pill">' + escapeHtml(qualityLabel(flag)) + '</span>').join("")
+          : '<span class="pill good">без відомих проблем</span>') +
+        '</div></div>' +
+        '<div class="operator-panel wide"><div class="label">Провайдери та технології</div><div class="list">' +
+        providersHtml + '</div></div>' +
+        '<div class="operator-panel"><div class="label">Coverage evidence</div><div class="list">' +
+        evidenceHtml + '</div></div>' +
+        '<div class="operator-panel"><div class="label">Geo provenance</div><div class="list">' +
+        geoHtml + '</div></div>' +
+        '<div class="operator-panel wide"><div class="label">Нотатки оператора</div>' +
+        '<div class="empty">Placeholder VS16. Нотатки ще не зберігаються і не змінюють дані.</div></div>' +
+        '</div>';
+
+      const mapButton = document.getElementById("operator-open-map");
+      if (mapButton) {
+        mapButton.addEventListener("click", () => {
+          activateTab("map-view");
+          requestAnimationFrame(() => {
+            ensureMap().then(() => {
+              state.map?.flyTo({
+                center: [Number(map.longitude), Number(map.latitude)],
+                zoom: 16,
+                essential: true,
+              });
+            });
+          });
+        });
+      }
+    }
+
+    async function openAddressWorkspace(addressId) {
+      if (!addressId) throw new Error("address_id_required");
+
+      state.selectedAddressId = addressId;
+      renderAddressInventory(
+        document.getElementById("address-filter").value,
+      );
+      document.getElementById("address-workspace").innerHTML =
+        '<div class="empty">Завантаження робочого місця…</div>';
+
+      const response = await getJson(
+        "/api/v1/operator/addresses/" + encodeURIComponent(addressId),
+      );
+
+      if (!response.ok) {
+        throw new Error(response.body?.error || "operator_workspace_failed");
+      }
+
+      renderOperatorWorkspace(response.body);
+    }
+
+    document.getElementById("address-filter").addEventListener("input", (event) => {
+      renderAddressInventory(event.target.value);
+    });
 
     function renderEvidence(availability, interaction) {
       const first = availability?.[0] ?? null;
@@ -1198,8 +1529,9 @@ export function explorerPage(): Response {
               escapeHtml(item.provider_count ?? 0) + ' провайдер · ' +
               escapeHtml(item.availability_count ?? 0) + ' записів доступності · ' +
               escapeHtml((item.technologies || []).join(", ") || "технології не вказані") +
-              '</div></div><button class="secondary" data-map-address-index="' +
-              index + '">Переглянути докази</button></div>';
+              '</div></div><div class="row-actions"><button class="secondary" data-map-address-index="' +
+              index + '">Докази</button><button class="secondary" data-open-address-id="' +
+              escapeHtml(item.address_id) + '">Робоче місце</button></div></div>';
           }).join("")
         : '<div class="empty">У цій комірці немає збережених адрес.</div>';
 
@@ -1215,6 +1547,18 @@ export function explorerPage(): Response {
           inspectMapAddress(Number(button.dataset.mapAddressIndex)).catch((error) => {
             document.getElementById("map-address-detail").innerHTML =
               '<div class="empty">Не вдалося перевірити адресу: ' +
+              escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
+              '</div>';
+          });
+        });
+      });
+
+      document.querySelectorAll("[data-open-address-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activateTab("addresses");
+          openAddressWorkspace(button.dataset.openAddressId).catch((error) => {
+            document.getElementById("address-workspace").innerHTML =
+              '<div class="empty">Не вдалося відкрити адресу: ' +
               escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
               '</div>';
           });
