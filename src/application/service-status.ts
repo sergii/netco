@@ -42,13 +42,16 @@ export function getEvidencePipelineStatus(
   };
 }
 
-export function getServiceMeta(bindings: RuntimeBindingState) {
+export function getServiceMeta(
+  bindings: RuntimeBindingState,
+  operatorWritesEnabled = false,
+) {
   const evidence = getEvidencePipelineStatus(bindings);
 
   return {
     service: "netco",
     version: "0.1.0",
-    stage: "operator-address-workspace-vs16",
+    stage: "operator-write-boundary-vs17",
     capabilities: {
       evidence: evidence.ready,
       snapshots: evidence.bindings.snapshots,
@@ -73,6 +76,11 @@ export function getServiceMeta(bindings: RuntimeBindingState) {
       map: true,
       map_cell_inspection: true,
       operator_address_workspace: true,
+      operator_writes: {
+        enabled: operatorWritesEnabled,
+        mode: operatorWritesEnabled ? "enabled" : "fail_closed",
+        boundary: "cloudflare_access",
+      },
       mcp: true,
     },
   };
