@@ -9,6 +9,7 @@ import { collectScheduledSources } from "./evidence/collector";
 import { providerRoute } from "./routes/providers";
 import { coverageRoute } from "./routes/coverage";
 import { geoRoute } from "./routes/geo";
+import { operatorRoute } from "./routes/operator";
 import { materializePendingAddressGeoPoints } from "./geo/evidence";
 import type { BrowserWorker } from "@cloudflare/playwright";
 import { explorerPage } from "./ui/explorer";
@@ -135,6 +136,15 @@ export default {
       );
     }
 
+    const operatorResult = await operatorRoute(request, env);
+    if (operatorResult) {
+      return json(
+        operatorResult.body as JsonValue,
+        operatorResult.status,
+        headers,
+      );
+    }
+
     const providerResult = await providerRoute(request, env);
     if (providerResult) {
       return json(
@@ -183,6 +193,7 @@ export default {
             "/api/v1/geo/h3-cells/:h3_index",
             "/api/v1/geo/enrichment-backlog",
             "/api/v1/geo/addresses/:address_id/provenance",
+            "/api/v1/operator/addresses/:address_id",
             "/api/v1/coverage/lanet/checker-interface",
             "/api/v1/coverage/lanet/checker-interaction",
             "/api/v1/coverage/lanet/address",
