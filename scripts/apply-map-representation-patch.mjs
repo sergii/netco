@@ -310,8 +310,11 @@ replaceOnce(
 );
 
 replaceOnce(
-  '            document.getElementById("map-inspector").innerHTML =\n              '<div class="map-empty">Не вдалося відкрити комірку: ' +',
-  '            openMapDrawer("Зона H3", "Помилка");\n            document.getElementById("map-drawer-body").innerHTML =\n              '<div class="map-empty">Не вдалося відкрити комірку: ' +',
+  String.raw`            document.getElementById("map-inspector").innerHTML =
+              '<div class="map-empty">Не вдалося відкрити комірку: ' +`,
+  String.raw`            openMapDrawer("Зона H3", "Помилка");
+            document.getElementById("map-drawer-body").innerHTML =
+              '<div class="map-empty">Не вдалося відкрити комірку: ' +`,
   "cell error drawer",
 );
 
@@ -399,8 +402,11 @@ replaceOnce(
 );
 
 replaceOnce(
-  '            document.getElementById("map-inspector").innerHTML =\n              '<div class="map-empty">Помилка карти: ' +',
-  '            openMapDrawer("Карта", "Помилка");\n            document.getElementById("map-drawer-body").innerHTML =\n              '<div class="map-empty">Помилка карти: ' +',
+  String.raw`            document.getElementById("map-inspector").innerHTML =
+              '<div class="map-empty">Помилка карти: ' +`,
+  String.raw`            openMapDrawer("Карта", "Помилка");
+            document.getElementById("map-drawer-body").innerHTML =
+              '<div class="map-empty">Помилка карти: ' +`,
   "map activation error",
 );
 
