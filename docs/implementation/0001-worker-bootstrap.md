@@ -94,3 +94,17 @@ After the first successful deployment:
 3. create the Evidence Spine schema;
 4. expose provenance for one provider observation;
 5. add R2 snapshot storage.
+
+## 2026-09-26 supersession note
+
+The deployment-path section above records the bootstrap state at the time it was written.
+
+Netco production deployment is now owned by Cloudflare Workers Builds connected to `sergii/netco` branch `main`, with the production deploy command:
+
+```text
+npx wrangler deploy
+```
+
+The historical GitHub Actions fallback and `.github/deploy-request` marker were removed once this owner was verified in production.
+
+Current deployment policy is defined by RFC-0023.
