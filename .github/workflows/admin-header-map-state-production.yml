@@ -1,0 +1,49 @@
+name: Admin Header and Map State Production Proof
+
+on:
+  push:
+    branches:
+      - test/admin-header-map-state-production
+    paths:
+      - ".github/workflows/admin-header-map-state-production.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify stable admin header and H3 map state
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://netco.sergii-ponomarov.workers.dev"
+          html="$(curl -fsS "$base/")"
+
+          grep -q 'const MAP_STATE_VERSION = "2"' <<<"$html"
+          grep -q 'params.get("map_v") === MAP_STATE_VERSION' <<<"$html"
+          grep -q 'url.searchParams.set("map_v", MAP_STATE_VERSION)' <<<"$html"
+
+          grep -q '.shell.map-mode .workspace {' <<<"$html"
+          grep -q 'padding:24px 28px 36px;' <<<"$html"
+          grep -q '.shell.map-mode .workspace-header {' <<<"$html"
+          grep -q 'margin-bottom:20px;' <<<"$html"
+
+          cells="$(curl -fsS --get             --data-urlencode "resolution=9"             --data-urlencode "west=30.33"             --data-urlencode "south=50.47"             --data-urlencode "east=30.35"             --data-urlencode "north=50.49"             "$base/api/v1/geo/h3-cells")"
+
+          CELLS="$cells" node --input-type=module <<'NODE'
+          const cells = JSON.parse(process.env.CELLS);
+          if (cells.count !== 1) throw new Error("expected one Kyiv H3 cell");
+          const feature = cells.features?.[0];
+          if (feature?.id !== "891e6385687ffff") {
+            throw new Error("trusted H3 cell missing");
+          }
+          console.log(JSON.stringify({
+            stable_top_rail: true,
+            map_state_version: 2,
+            h3_cell: feature.id,
+            address_count: feature.properties?.address_count,
+          }, null, 2));
+          NODE
