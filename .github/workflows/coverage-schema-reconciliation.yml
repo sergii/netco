@@ -1,0 +1,32 @@
+name: Coverage Schema Reconciliation
+
+on:
+  push:
+    branches:
+      - fix/canonical-coverage-schema
+    paths:
+      - ".github/workflows/coverage-schema-reconciliation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      CONFIRM_COVERAGE_RESET: RECONCILE_COVERAGE_VS5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require Neon credential
+        run: test -n "$NEON_API_KEY"
+      - name: Install Neon CLI
+        run: npm i -g neon@latest
+      - name: Reconcile canonical coverage schema
+        run: bash scripts/reconcile-coverage-schema-production.sh
