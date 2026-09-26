@@ -157,7 +157,7 @@ export async function operatorRoute(
     );
 
     return result.ok
-      ? { status: 201, body: result.value }
+      ? { status: 201, body: { ...result.value } }
       : failureResult(result);
   }
 
