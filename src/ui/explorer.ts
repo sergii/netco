@@ -66,15 +66,14 @@ export function explorerPage(): Response {
       display:flex;
       flex-direction:column;
     }
-    .shell.map-mode #map {
+    .shell.map-mode .map-stage {
       flex:1 1 auto;
       height:auto;
       min-height:0;
     }
-    .shell.map-mode .map-inspector {
-      flex:0 0 auto;
-      max-height:32vh;
-      overflow:auto;
+    .shell.map-mode #map {
+      height:100%;
+      min-height:0;
     }
     .shell.map-mode .footer {
       display:none;
@@ -174,6 +173,119 @@ export function explorerPage(): Response {
     }
     .map-title { font-weight:720; }\n    .map-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
     .map-meta { color:var(--muted); font-size:12px; }
+    .map-toolbar-main {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .map-levels {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-top:10px;
+    }
+    .map-level-label {
+      margin-right:4px;
+      color:var(--muted);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .map-level {
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:5px 10px;
+      background:#0b1017;
+      color:var(--muted);
+      font-size:12px;
+      cursor:pointer;
+    }
+    .map-level:hover:not(:disabled) {
+      color:var(--text);
+      border-color:#46627f;
+    }
+    .map-level.active {
+      color:var(--text);
+      background:#1a2430;
+      border-color:#6c9bd1;
+    }
+    .map-level:disabled {
+      cursor:not-allowed;
+      opacity:.42;
+    }
+    .map-stage {
+      position:relative;
+      min-height:460px;
+      height:min(68vh,720px);
+      overflow:hidden;
+    }
+    .map-stage #map {
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      min-height:0;
+    }
+    .map-drawer {
+      position:absolute;
+      z-index:6;
+      inset:0 auto 0 0;
+      width:min(430px,calc(100% - 56px));
+      display:flex;
+      flex-direction:column;
+      background:rgba(10,14,20,.98);
+      border-right:1px solid var(--line);
+      box-shadow:18px 0 50px rgba(0,0,0,.34);
+      transform:translateX(-102%);
+      transition:transform 180ms ease;
+      pointer-events:none;
+    }
+    .map-drawer.open {
+      transform:translateX(0);
+      pointer-events:auto;
+    }
+    .map-drawer-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      padding:16px;
+      border-bottom:1px solid var(--line);
+    }
+    .map-drawer-title {
+      margin-top:4px;
+      font-size:18px;
+      font-weight:750;
+      letter-spacing:-.02em;
+    }
+    .map-drawer-close {
+      width:34px;
+      height:34px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#0d1219;
+      color:var(--muted);
+      font-size:24px;
+      line-height:1;
+      cursor:pointer;
+    }
+    .map-drawer-close:hover {
+      color:var(--text);
+      border-color:#46627f;
+    }
+    .map-drawer-body {
+      min-height:0;
+      overflow:auto;
+      padding:16px;
+      display:grid;
+      gap:12px;
+    }
+    .map-stats {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
     #map { width:100%; height:min(68vh,720px); min-height:460px; background:#0d1219; }
     .map-inspector {
       display:grid; grid-template-columns:repeat(5,1fr); gap:10px;
@@ -454,13 +566,13 @@ export function explorerPage(): Response {
       .shell.map-mode #map-view .map-card {
         height:auto;
       }
-      .shell.map-mode #map {
+      .shell.map-mode .map-stage {
         height:64vh;
         min-height:420px;
       }
-      .shell.map-mode .map-inspector {
-        max-height:none;
-        overflow:visible;
+      .shell.map-mode #map {
+        height:100%;
+        min-height:0;
       }
     }
 
@@ -540,15 +652,35 @@ export function explorerPage(): Response {
     <section id="map-view" class="view">
       <div class="card map-card">
         <div class="map-toolbar">
-          <div>
-            <div class="label">Збережене покриття</div>
-            <div class="map-title">Карта покриття Києва H3</div>
+          <div class="map-toolbar-main">
+            <div>
+              <div class="label">Збережене покриття</div>
+              <div class="map-title">Карта покриття Києва</div>
+            </div>
+            <div class="map-actions">
+              <button class="secondary" id="map-reset-kyiv">До Києва</button>
+              <div class="map-meta"><span id="map-cell-count">0 комірок</span></div>
+            </div>
           </div>
-          <div class="map-actions"><button class="secondary" id="map-reset-kyiv">До Києва</button><div class="map-meta"><span id="map-cell-count">0 комірок</span> · H3 r9</div></div>
+          <div class="map-levels" aria-label="Рівень представлення карти">
+            <span class="map-level-label">Рівень</span>
+            <button class="map-level" data-map-level="districts" disabled title="З’явиться після додавання районних геометрій">Райони</button>
+            <button class="map-level active" data-map-level="zones">Зони H3</button>
+            <button class="map-level" data-map-level="buildings">Будинки</button>
+          </div>
         </div>
-        <div id="map" role="application" aria-label="Карта покриття Netco"></div>
-        <div id="map-inspector" class="map-inspector">
-          <div class="map-empty">Оберіть H3-комірку, щоб переглянути, що Netco вже знає.</div>
+        <div class="map-stage">
+          <div id="map" role="application" aria-label="Карта покриття Netco"></div>
+          <aside id="map-drawer" class="map-drawer" aria-hidden="true" aria-label="Інспектор вибраного об’єкта">
+            <div class="map-drawer-head">
+              <div>
+                <div class="label" id="map-drawer-kicker">Об’єкт карти</div>
+                <div class="map-drawer-title" id="map-drawer-title">Деталі</div>
+              </div>
+              <button class="map-drawer-close" id="map-drawer-close" aria-label="Закрити інспектор">×</button>
+            </div>
+            <div id="map-drawer-body" class="map-drawer-body"></div>
+          </aside>
         </div>
       </div>
     </section>
@@ -610,7 +742,9 @@ export function explorerPage(): Response {
       map: null,
       maplibregl: null,
       mapReady: false,
+      mapLevel: "zones",
       selectedCell: null,
+      selectedAddress: null,
     };
 
     async function getJson(path) {
@@ -719,7 +853,8 @@ export function explorerPage(): Response {
       if (name === "map-view") {
         requestAnimationFrame(() => {
           ensureMap().catch((error) => {
-            document.getElementById("map-inspector").innerHTML =
+            openMapDrawer("Карта", "Помилка");
+            document.getElementById("map-drawer-body").innerHTML =
               '<div class="map-empty">Помилка карти: ' +
               escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
               '</div>';
@@ -837,21 +972,98 @@ export function explorerPage(): Response {
       url.searchParams.set("lng", center.lng.toFixed(5));
       url.searchParams.set("lat", center.lat.toFixed(5));
       url.searchParams.set("z", state.map.getZoom().toFixed(2));
+      url.searchParams.set("level", state.mapLevel);
       history.replaceState(null, "", url);
+    }
+
+    function emptyFeatureCollection() {
+      return { type: "FeatureCollection", features: [] };
+    }
+
+    function setMapLayerVisibility(level) {
+      if (!state.mapReady || !state.map) return;
+      state.map.setLayoutProperty(
+        "netco-h3-fill",
+        "visibility",
+        level === "zones" ? "visible" : "none",
+      );
+      state.map.setLayoutProperty(
+        "netco-h3-outline",
+        "visibility",
+        level === "zones" ? "visible" : "none",
+      );
+      state.map.setLayoutProperty(
+        "netco-buildings",
+        "visibility",
+        level === "buildings" ? "visible" : "none",
+      );
+    }
+
+    function updateMapLevelControls() {
+      document.querySelectorAll("[data-map-level]").forEach((button) => {
+        button.classList.toggle(
+          "active",
+          button.dataset.mapLevel === state.mapLevel,
+        );
+      });
+    }
+
+    async function setMapLevel(level) {
+      if (level !== "zones" && level !== "buildings") return;
+      if (state.mapLevel === level) return;
+
+      state.mapLevel = level;
+      state.selectedCell = null;
+      state.selectedAddress = null;
+      updateMapLevelControls();
+      closeMapDrawer();
+      setMapLayerVisibility(level);
+      persistMapState();
+      await refreshMapData();
     }
 
     async function refreshMapData() {
       if (!state.mapReady || !state.map) return;
 
       const bounds = state.map.getBounds();
-      const params = new URLSearchParams({
-        resolution: "9",
+      const viewport = {
         west: String(bounds.getWest()),
         south: String(bounds.getSouth()),
         east: String(bounds.getEast()),
         north: String(bounds.getNorth()),
-      });
+      };
 
+      if (state.mapLevel === "buildings") {
+        const params = new URLSearchParams({
+          geometry: "present",
+          ...viewport,
+        });
+        const response = await getJson(
+          "/api/v1/geo/coverage-points?" + params.toString(),
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            response.body?.error || "coverage_points_query_failed",
+          );
+        }
+
+        const buildings = response.body;
+        state.map.getSource("netco-buildings")?.setData(buildings);
+        state.map.getSource("netco-h3")?.setData(emptyFeatureCollection());
+        setMapLayerVisibility("buildings");
+
+        const count = Number(buildings?.count ?? 0);
+        document.getElementById("map-cell-count").textContent =
+          String(count) + " " +
+          ukPlural(count, "будинок", "будинки", "будинків");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        resolution: "9",
+        ...viewport,
+      });
       const response = await getJson(
         "/api/v1/geo/h3-cells?" + params.toString(),
       );
@@ -860,14 +1072,15 @@ export function explorerPage(): Response {
         throw new Error(response.body?.error || "h3_query_failed");
       }
 
-      const data = response.body;
-      const source = state.map.getSource("netco-h3");
-      if (source) source.setData(data);
+      const cells = response.body;
+      state.map.getSource("netco-h3")?.setData(cells);
+      state.map.getSource("netco-buildings")?.setData(emptyFeatureCollection());
+      setMapLayerVisibility("zones");
 
-      const cellCount = Number(data?.count ?? 0);
+      const count = Number(cells?.count ?? 0);
       document.getElementById("map-cell-count").textContent =
-        String(cellCount) + " " +
-        ukPlural(cellCount, "комірка", "комірки", "комірок");
+        String(count) + " " +
+        ukPlural(count, "комірка", "комірки", "комірок");
     }
 
     function mapTechnologies(value) {
@@ -903,13 +1116,29 @@ export function explorerPage(): Response {
       return params;
     }
 
+    function openMapDrawer(kicker, title) {
+      const drawer = document.getElementById("map-drawer");
+      document.getElementById("map-drawer-kicker").textContent = kicker;
+      document.getElementById("map-drawer-title").textContent = title;
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden", "false");
+    }
+
+    function closeMapDrawer() {
+      const drawer = document.getElementById("map-drawer");
+      drawer.classList.remove("open");
+      drawer.setAttribute("aria-hidden", "true");
+      state.selectedCell = null;
+      state.selectedAddress = null;
+    }
+
     function renderCellSummary(properties, detailHtml = "") {
       const technologies = mapTechnologies(properties.technologies);
+      const h3Index = properties.h3_index || "невідомо";
+      openMapDrawer("Зона H3", String(h3Index));
 
-      document.getElementById("map-inspector").innerHTML =
-        '<div class="map-stat"><div class="label">H3-комірка</div><strong>' +
-        escapeHtml(properties.h3_index || "невідомо") +
-        '</strong></div>' +
+      document.getElementById("map-drawer-body").innerHTML =
+        '<div class="map-stats">' +
         '<div class="map-stat"><div class="label">Адреси</div><strong>' +
         escapeHtml(properties.address_count ?? 0) +
         '</strong></div>' +
@@ -922,6 +1151,7 @@ export function explorerPage(): Response {
         '<div class="map-stat"><div class="label">Технології</div><strong>' +
         escapeHtml(technologies.join(", ") || "немає") +
         '</strong></div>' +
+        '</div>' +
         detailHtml;
     }
 
@@ -947,6 +1177,7 @@ export function explorerPage(): Response {
       }
 
       state.selectedCell = response.body;
+      state.selectedAddress = null;
       const addresses = Array.isArray(response.body?.addresses)
         ? response.body.addresses
         : [];
@@ -995,7 +1226,15 @@ export function explorerPage(): Response {
       const item = state.selectedCell?.addresses?.[index];
       if (!item) throw new Error("address_not_found_in_selected_cell");
 
+      state.selectedAddress = item;
       const address = item.address || {};
+      const addressLabel = [address.city, address.street, address.house_number]
+        .filter(Boolean)
+        .join(", ");
+      openMapDrawer(
+        "Будинок",
+        addressLabel || item.normalized_key || item.address_id,
+      );
       const params = structuredAddressParams(address);
       const [coverage, provenance] = await Promise.all([
         getJson("/api/v1/coverage/address?" + params.toString()),
@@ -1043,6 +1282,59 @@ export function explorerPage(): Response {
         '</div><div class="list">' + providerHtml + '</div>';
     }
 
+    function buildingFeatureToAddress(feature) {
+      const properties = feature.properties || {};
+      const coordinates = feature.geometry?.coordinates || [];
+
+      return {
+        address_id: properties.address_id,
+        normalized_key: properties.normalized_key,
+        address: {
+          country_code: properties.country_code,
+          region: properties.region || null,
+          city: properties.city,
+          district: properties.district || null,
+          street: properties.street,
+          house_number: properties.house_number,
+          corpus: properties.corpus || null,
+          building_letter: properties.building_letter || null,
+          postal_code: properties.postal_code || null,
+        },
+        point: {
+          longitude: coordinates[0],
+          latitude: coordinates[1],
+        },
+        freshness_state: properties.freshness_state,
+        provider_count: Number(properties.provider_count || 0),
+        availability_count: Number(properties.availability_count || 0),
+        technologies: mapTechnologies(properties.technologies),
+        latest_observed_at: properties.latest_observed_at,
+      };
+    }
+
+    async function inspectMapBuilding(feature) {
+      const item = buildingFeatureToAddress(feature);
+      state.selectedCell = { addresses: [item] };
+      state.selectedAddress = item;
+
+      const address = item.address || {};
+      const label = [
+        address.city,
+        address.street,
+        address.house_number,
+      ].filter(Boolean).join(", ");
+
+      openMapDrawer(
+        "Будинок",
+        label || item.normalized_key || item.address_id,
+      );
+      document.getElementById("map-drawer-body").innerHTML =
+        '<div id="map-address-detail" class="map-address-detail muted">' +
+        'Завантаження покриття та доказів…</div>';
+
+      await inspectMapAddress(0);
+    }
+
     async function ensureMap() {
       if (state.map) {
         state.map.resize();
@@ -1058,6 +1350,12 @@ export function explorerPage(): Response {
       state.maplibregl = maplibregl;
 
       const initial = mapInitialState();
+      const requestedLevel =
+        new URL(window.location.href).searchParams.get("level");
+      state.mapLevel =
+        requestedLevel === "buildings" ? "buildings" : "zones";
+      updateMapLevelControls();
+
       const map = new maplibregl.Map({
         container: "map",
         style: "https://tiles.openfreemap.org/styles/liberty",
@@ -1118,14 +1416,57 @@ export function explorerPage(): Response {
           },
         });
 
+        map.addSource("netco-buildings", {
+          type: "geojson",
+          data: emptyFeatureCollection(),
+        });
+
+        map.addLayer({
+          id: "netco-buildings",
+          type: "circle",
+          source: "netco-buildings",
+          layout: { visibility: "none" },
+          paint: {
+            "circle-radius": 7,
+            "circle-color": [
+              "match",
+              ["get", "freshness_state"],
+              "fresh",
+              "#54d59d",
+              "#f2c96d",
+            ],
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#eef4fb",
+            "circle-opacity": 0.9,
+          },
+        });
+
         map.on("click", "netco-h3-fill", (event) => {
           const feature = event.features?.[0];
           if (!feature) return;
 
           inspectMapCell(feature.properties || {}).catch((error) => {
-            document.getElementById("map-inspector").innerHTML =
+            openMapDrawer("Зона H3", "Помилка");
+            document.getElementById("map-drawer-body").innerHTML =
               '<div class="map-empty">Не вдалося відкрити комірку: ' +
               escapeHtml(error instanceof Error ? error.message : "невідома помилка") +
+              '</div>';
+          });
+        });
+
+        map.on("click", "netco-buildings", (event) => {
+          const feature = event.features?.[0];
+          if (!feature) return;
+
+          inspectMapBuilding(feature).catch((error) => {
+            openMapDrawer("Будинок", "Помилка");
+            document.getElementById("map-drawer-body").innerHTML =
+              '<div class="map-empty">Не вдалося відкрити будинок: ' +
+              escapeHtml(
+                error instanceof Error
+                  ? error.message
+                  : "невідома помилка",
+              ) +
               '</div>';
           });
         });
@@ -1137,8 +1478,24 @@ export function explorerPage(): Response {
         map.on("mouseleave", "netco-h3-fill", () => {
           map.getCanvas().style.cursor = "";
         });
+        map.on("mouseenter", "netco-buildings", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "netco-buildings", () => {
+          map.getCanvas().style.cursor = "";
+        });
+
+        map.on("click", (event) => {
+          const layers =
+            state.mapLevel === "buildings"
+              ? ["netco-buildings"]
+              : ["netco-h3-fill"];
+          const hits = map.queryRenderedFeatures(event.point, { layers });
+          if (hits.length === 0) closeMapDrawer();
+        });
 
         state.mapReady = true;
+        setMapLayerVisibility(state.mapLevel);
         await refreshMapData();
       });
 
@@ -1148,6 +1505,25 @@ export function explorerPage(): Response {
           zoom: 13.5,
           essential: true,
         });
+      });
+
+      document
+        .getElementById("map-drawer-close")
+        .addEventListener("click", closeMapDrawer);
+
+      document.querySelectorAll("[data-map-level]").forEach((button) => {
+        if (button.disabled) return;
+        button.addEventListener("click", () => {
+          setMapLevel(button.dataset.mapLevel).catch((error) => {
+            document.getElementById("map-cell-count").textContent =
+              "помилка запиту";
+            console.error("netco_map_level_failed", error);
+          });
+        });
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeMapDrawer();
       });
 
       map.on("moveend", () => {
